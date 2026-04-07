@@ -134,6 +134,54 @@
     /* ═══════════════════════════════════════════
        MOBILE — pure CSS, no JS toggling needed
     ═══════════════════════════════════════════ */
+    /* AGENT PROFILE MODAL */
+    .profile-back{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:900;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;padding:16px;}
+    .profile-back.open{opacity:1;pointer-events:all;}
+    .profile-modal{background:var(--white);border-radius:var(--r-xl);width:100%;max-width:440px;box-shadow:0 12px 40px rgba(0,0,0,.16);transform:translateY(16px) scale(.98);transition:transform .2s;overflow:hidden;}
+    .profile-back.open .profile-modal{transform:none;}
+    .profile-hero{height:90px;background:linear-gradient(135deg,#3DBFA0 0%,#1D9E75 100%);position:relative;}
+    .profile-close{position:absolute;top:10px;right:10px;width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,.2);border:none;color:#fff;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;}
+    .profile-hs-wrap{position:absolute;bottom:-32px;left:24px;}
+    .profile-hs{width:68px;height:68px;border-radius:50%;background:linear-gradient(135deg,#9FE1CB,#1D9E75);border:3px solid var(--white);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:600;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15);}
+    .profile-body{padding:44px 24px 24px;}
+    .profile-name{font-family:'DM Serif Display',serif;font-size:22px;color:var(--g900);margin-bottom:2px;}
+    .profile-role{font-size:13px;color:var(--g400);margin-bottom:14px;}
+    .profile-bio{font-size:13px;color:var(--g600);line-height:1.65;margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--g100);}
+    .profile-contacts{display:flex;flex-direction:column;gap:8px;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--g100);}
+    .pc{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--g600);}
+    .pc-icon{width:30px;height:30px;border-radius:8px;background:var(--g50);border:1px solid var(--g200);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .pc a{color:var(--green);text-decoration:none;}
+    .pc a:hover{text-decoration:underline;}
+    .profile-recent-lbl{font-size:10px;font-weight:600;color:var(--g400);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;}
+    .profile-sales{display:flex;flex-direction:column;gap:7px;}
+    .psale{display:flex;align-items:center;gap:10px;background:var(--g50);border-radius:var(--r-lg);padding:10px 12px;cursor:pointer;transition:background .15s;border:1px solid transparent;}
+    .psale:hover{background:var(--white);border-color:var(--green);}
+    .psale-icon{font-size:22px;flex-shrink:0;}
+    .psale-info{flex:1;min-width:0;}
+    .psale-addr{font-size:12px;font-weight:600;color:var(--g900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .psale-meta{font-size:11px;color:var(--g400);margin-top:2px;}
+    .psale-price{font-size:13px;font-weight:600;color:var(--purple);flex-shrink:0;}
+
+    /* SHARE BUTTON + MODAL */
+    .share-btn{display:flex;align-items:center;gap:5px;background:var(--white);color:var(--g600);border:1px solid var(--g200);border-radius:var(--r-md);padding:6px 11px;font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;transition:border-color .15s,color .15s;}
+    .share-btn:hover{border-color:var(--green);color:var(--green);}
+    .share-url-row{display:flex;gap:8px;margin:14px 0 8px;}
+    .share-url{flex:1;height:38px;border:1px solid var(--g200);border-radius:var(--r-md);padding:0 12px;font-size:12px;color:var(--g600);background:var(--g50);font-family:'DM Sans',sans-serif;cursor:text;}
+    .share-copy{height:38px;padding:0 14px;background:var(--green);color:#fff;border:none;border-radius:var(--r-md);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;transition:background .15s;}
+    .share-copy:hover{background:var(--green-dark);}
+    .share-copy.copied{background:var(--purple);}
+    .share-note{font-size:12px;color:var(--g400);line-height:1.6;}
+    .share-preview{background:var(--g50);border-radius:var(--r-lg);padding:14px;margin-top:14px;border:1px solid var(--g200);}
+    .share-preview-lbl{font-size:10px;font-weight:600;color:var(--g400);text-transform:uppercase;letter-spacing:.6px;margin-bottom:9px;}
+    .share-preview-row{display:flex;align-items:center;gap:10px;}
+    .share-preview-av{width:36px;height:36px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff;flex-shrink:0;}
+    .share-preview-name{font-size:13px;font-weight:600;color:var(--g900);}
+    .share-preview-sub{font-size:11px;color:var(--g400);margin-top:1px;}
+
+    /* PUBLIC VIEW banner */
+    .pub-banner{display:none;position:fixed;top:var(--bar);left:0;right:0;z-index:450;background:var(--green);color:#fff;text-align:center;padding:9px 16px;font-size:13px;font-weight:500;}
+    .pub-banner.show{display:block;}
+
     @media(max-width:768px){
       :root{--bar:50px;}
 
@@ -280,7 +328,8 @@
   </a>
   <div class="bar-right">
     <div class="chip">Prototype</div>
-    <div class="av-pill"><div class="av">JM</div><span class="av-name">Jennifer Mills Realty</span></div>
+    <button class="share-btn" id="share-btn"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="12" cy="3" r="1.5" stroke="currentColor" stroke-width="1.4"/><circle cx="4" cy="8" r="1.5" stroke="currentColor" stroke-width="1.4"/><circle cx="12" cy="13" r="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.5 3.75L5.5 7.25M5.5 8.75l5 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>Share</button>
+    <div class="av-pill" id="agent-pill" style="cursor:pointer;" title="View agent profile"><div class="av">JM</div><span class="av-name">Jennifer Mills Realty</span></div>
     <button class="cta-btn" id="req-btn">Request Access</button>
   </div>
 </div>
@@ -418,6 +467,74 @@
       </div>
     </div>
   </div>
+</div>
+
+
+<!-- AGENT PROFILE MODAL -->
+<div class="profile-back" id="profile-back">
+  <div class="profile-modal">
+    <div class="profile-hero">
+      <div class="profile-hs-wrap"><div class="profile-hs">JM</div></div>
+      <button class="profile-close" id="profile-close">✕</button>
+    </div>
+    <div class="profile-body">
+      <div class="profile-name">Jennifer Mills</div>
+      <div class="profile-role">Realtor · Jennifer Mills Realty</div>
+      <div class="profile-bio">With over 14 years of experience in the Connecticut shoreline market, Jennifer specializes in residential sales, waterfront properties, and investment portfolios across New Haven and Fairfield counties. Known for her deep local knowledge and no-pressure approach, she has closed over $85M in transactions.</div>
+      <div class="profile-contacts">
+        <div class="pc">
+          <div class="pc-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4.5A1.5 1.5 0 013.5 3h9A1.5 1.5 0 0114 4.5v7a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 11.5v-7z" stroke="currentColor" stroke-width="1.3"/><path d="M2 5l6 4 6-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></div>
+          <a href="mailto:jennifer@millsrealty.com">jennifer@millsrealty.com</a>
+        </div>
+        <div class="pc">
+          <div class="pc-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 2.5C3 2.224 3.224 2 3.5 2h2.236a.5.5 0 01.476.345l.75 2.25a.5.5 0 01-.149.538L5.5 6.2C6.284 7.9 7.9 9.5 9.8 10.287l1.067-1.313a.5.5 0 01.538-.149l2.25.75A.5.5 0 0114 10.05v2.45c0 .276-.224.5-.5.5C6.492 13 3 9.5 3 2.5z" stroke="currentColor" stroke-width="1.3"/></svg></div>
+          <a href="tel:+12035550182">(203) 555-0182</a>
+        </div>
+        <div class="pc">
+          <div class="pc-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><path d="M8 2v6l3 2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></div>
+          <span>SmartMLS Member #14892 · Licensed CT</span>
+        </div>
+        <div class="pc">
+          <div class="pc-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1.5C5.1 1.5 2.75 3.85 2.75 6.75C2.75 10.9 8 14.5 8 14.5S13.25 10.9 13.25 6.75C13.25 3.85 10.9 1.5 8 1.5Z" stroke="currentColor" stroke-width="1.3" fill="none"/><circle cx="8" cy="6.75" r="2" stroke="currentColor" stroke-width="1.3"/></svg></div>
+          <span>West Haven, CT · Serving all 8 CT counties</span>
+        </div>
+      </div>
+      <div class="profile-recent-lbl">3 Most Recent Sales</div>
+      <div class="profile-sales" id="profile-sales"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SHARE LINK MODAL -->
+<div class="mback" id="share-back" style="z-index:910;">
+  <div class="modal share-modal-inner">
+    <div class="mlogo">
+      <div class="logo-mark" style="width:28px;height:28px"><svg viewBox="0 0 16 16" fill="none" style="width:15px;height:15px"><path d="M8 1.5C5.1 1.5 2.75 3.85 2.75 6.75C2.75 10.9 8 14.5 8 14.5S13.25 10.9 13.25 6.75C13.25 3.85 10.9 1.5 8 1.5Z" stroke="white" stroke-width="1.5" fill="none"/><circle cx="8" cy="6.75" r="2" fill="white"/></svg></div>
+      <span class="logo-name">Social<span>Proof</span></span>
+    </div>
+    <div class="mt">Shareable client link</div>
+    <div class="ms">Send this link to clients so they can browse your full property portfolio — no login required.</div>
+    <div class="share-url-row">
+      <input class="share-url" id="share-url" readonly/>
+      <button class="share-copy" id="share-copy">Copy</button>
+    </div>
+    <div class="share-note">Clients will see your portfolio map, all listings, and your agent profile. Filters and search are fully available.</div>
+    <div class="share-preview">
+      <div class="share-preview-lbl">Shared as</div>
+      <div class="share-preview-row">
+        <div class="share-preview-av">JM</div>
+        <div><div class="share-preview-name">Jennifer Mills Realty</div><div class="share-preview-sub">West Haven, CT · 12 active listings</div></div>
+      </div>
+    </div>
+    <div class="mbr" style="margin-top:18px;">
+      <button class="msbtn" id="share-done">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- PUBLIC VIEW BANNER -->
+<div class="pub-banner" id="pub-banner">
+  Viewing Jennifer Mills Realty's portfolio &nbsp;·&nbsp; <a href="?" style="color:#fff;font-weight:600;">Open SocialProof</a>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -620,6 +737,78 @@ document.getElementById("msub").addEventListener("click",()=>{
   if(!nm||!em){alert("Please enter your name and email.");return;}
   document.getElementById("mbody").innerHTML=`<div class="msuc"><div class="msuc-i">🎉</div><div class="msuc-t">You're on the list!</div><div class="msuc-s">Thanks, ${nm}! We'll be in touch at ${em} with early access details.</div></div><div class="mbr" style="margin-top:18px"><button class="msbtn" onclick="document.getElementById('mback').classList.remove('open')">Close</button></div>`;
 });
+
+
+// ── AGENT PROFILE MODAL ──
+const AGENT = {
+  name:"Jennifer Mills",
+  initials:"JM",
+  role:"Realtor · Jennifer Mills Realty"
+};
+
+function buildProfileSales(){
+  const sold = DATA.filter(l=>l.status==="Sold").slice(0,3);
+  const el = document.getElementById("profile-sales");
+  el.innerHTML = sold.map(l=>`
+    <div class="psale" onclick="openListingFromProfile(${l.id})">
+      <div class="psale-icon">${l.icon}</div>
+      <div class="psale-info">
+        <div class="psale-addr">${l.addr}</div>
+        <div class="psale-meta">${l.town}, CT · ${l.type}</div>
+      </div>
+      <div class="psale-price">$${l.price.toLocaleString()}</div>
+    </div>`).join("");
+}
+
+function openListingFromProfile(id){
+  document.getElementById("profile-back").classList.remove("open");
+  selectL(id);
+}
+
+document.getElementById("agent-pill").addEventListener("click",()=>{
+  buildProfileSales();
+  document.getElementById("profile-back").classList.add("open");
+});
+document.getElementById("profile-close").addEventListener("click",()=>document.getElementById("profile-back").classList.remove("open"));
+document.getElementById("profile-back").addEventListener("click",e=>{if(e.target===document.getElementById("profile-back"))document.getElementById("profile-back").classList.remove("open");});
+
+// ── SHARE LINK ──
+function buildShareURL(){
+  const base = window.location.href.split('?')[0];
+  return base + "?view=public&agent=jennifer-mills";
+}
+
+document.getElementById("share-btn").addEventListener("click",()=>{
+  document.getElementById("share-url").value = buildShareURL();
+  document.getElementById("share-back").classList.add("open");
+});
+document.getElementById("share-done").addEventListener("click",()=>document.getElementById("share-back").classList.remove("open"));
+document.getElementById("share-back").addEventListener("click",e=>{if(e.target===document.getElementById("share-back"))document.getElementById("share-back").classList.remove("open");});
+document.getElementById("share-copy").addEventListener("click",()=>{
+  const el = document.getElementById("share-url");
+  el.select(); el.setSelectionRange(0,999);
+  navigator.clipboard.writeText(el.value).catch(()=>{});
+  const btn = document.getElementById("share-copy");
+  btn.textContent="Copied!"; btn.classList.add("copied");
+  setTimeout(()=>{btn.textContent="Copy"; btn.classList.remove("copied");}, 2000);
+});
+
+// ── PUBLIC VIEW MODE (when ?view=public in URL) ──
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  if(params.get("view")==="public"){
+    document.getElementById("pub-banner").classList.add("show");
+    // hide internal controls in public view
+    const reqBtn = document.getElementById("req-btn");
+    if(reqBtn) reqBtn.style.display="none";
+    const shareBtn = document.getElementById("share-btn");
+    if(shareBtn) shareBtn.style.display="none";
+    // push shell down to make room for banner
+    document.querySelector(".shell").style.paddingTop="calc(var(--bar) + 38px)";
+    const mapwrap = document.querySelector(".mapwrap");
+    if(mapwrap && window.innerWidth<=768) mapwrap.style.top="calc(var(--bar) + 38px)";
+  }
+})();
 
 // ── RENDER ──
 function renderAll(){
