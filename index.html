@@ -1,834 +1,635 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>SocialProof — Real Estate Portfolio Maps</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{
+      --green:#1D9E75;--green-dark:#0F6E56;--green-light:#E1F5EE;
+      --purple:#534AB7;--purple-light:#EEEDFE;
+      --amber:#BA7517;--amber-light:#FAEEDA;
+      --blue:#185FA5;--blue-light:#E6F1FB;
+      --g50:#F7F7F5;--g100:#EFEFEB;--g200:#DDDDD8;
+      --g400:#9A9A94;--g600:#5F5E5A;--g900:#1C1C1A;
+      --white:#fff;--bar:54px;
+      --r-md:10px;--r-lg:14px;--r-xl:20px;
+    }
+    html,body{height:100%;overflow:hidden;}
+    body{font-family:'DM Sans',sans-serif;color:var(--g900);font-size:14px;background:var(--g50);}
 
-    :root {
-      --green: #1D9E75;
-      --green-dark: #0F6E56;
-      --green-light: #E1F5EE;
-      --purple: #534AB7;
-      --purple-light: #EEEDFE;
-      --amber: #BA7517;
-      --amber-light: #FAEEDA;
-      --blue: #185FA5;
-      --blue-light: #E6F1FB;
-      --gray-50: #F7F7F5;
-      --gray-100: #EFEFEB;
-      --gray-200: #DDDDD8;
-      --gray-400: #9A9A94;
-      --gray-600: #5F5E5A;
-      --gray-900: #1C1C1A;
-      --white: #FFFFFF;
-      --radius-sm: 6px;
-      --radius-md: 10px;
-      --radius-lg: 14px;
-      --radius-xl: 20px;
-      --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
-      --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
-      --shadow-lg: 0 12px 32px rgba(0,0,0,0.10), 0 4px 8px rgba(0,0,0,0.05);
-    }
+    /* TOPBAR */
+    .bar{position:fixed;top:0;left:0;right:0;z-index:600;height:var(--bar);background:var(--white);border-bottom:1px solid var(--g200);display:flex;align-items:center;justify-content:space-between;padding:0 16px;box-shadow:0 1px 3px rgba(0,0,0,.08);}
+    .logo{display:flex;align-items:center;gap:8px;text-decoration:none;}
+    .logo-mark{width:28px;height:28px;border-radius:8px;background:var(--green);display:flex;align-items:center;justify-content:center;}
+    .logo-mark svg{width:15px;height:15px;}
+    .logo-name{font-family:'DM Serif Display',serif;font-size:16px;color:var(--g900);}
+    .logo-name span{color:var(--green);}
+    .bar-right{display:flex;align-items:center;gap:8px;}
+    .chip{display:flex;align-items:center;gap:5px;background:var(--amber-light);color:var(--amber);border:1px solid #EFC97A;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:500;}
+    .chip::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--amber);}
+    .av-pill{display:flex;align-items:center;gap:7px;background:var(--g50);border:1px solid var(--g200);border-radius:20px;padding:4px 11px 4px 5px;}
+    .av{width:24px;height:24px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;color:#fff;}
+    .av-name{font-size:12px;font-weight:500;}
+    .cta-btn{background:var(--green);color:#fff;border:none;border-radius:var(--r-md);padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;}
+    .cta-btn:hover{background:var(--green-dark);}
 
-    html, body { height: 100%; overflow: hidden; }
+    /* DESKTOP: sidebar + map side by side */
+    .shell{display:flex;height:100vh;padding-top:var(--bar);}
+    .sidebar{width:310px;flex-shrink:0;background:var(--white);border-right:1px solid var(--g200);display:flex;flex-direction:column;overflow:hidden;}
+    .mapwrap{flex:1;position:relative;}
+    #map{width:100%;height:100%;min-height:400px;}
+    /* hide mobile-only elements on desktop */
+    .m-bar{display:none;}
+    .bsheet{display:none;}
+    .mdetail{display:none;}
 
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: var(--gray-50);
-      color: var(--gray-900);
-      font-size: 14px;
-      line-height: 1.5;
-    }
+    /* Sidebar internals */
+    .filters{padding:12px 14px;border-bottom:1px solid var(--g100);}
+    .flbl{font-size:10px;font-weight:600;color:var(--g400);text-transform:uppercase;letter-spacing:.7px;margin-bottom:7px;}
+    .srow{display:flex;gap:7px;margin-bottom:10px;}
+    .swrap{flex:1;position:relative;}
+    .sico{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--g400);pointer-events:none;}
+    .sinput{width:100%;height:33px;border-radius:var(--r-md);border:1px solid var(--g200);background:var(--g50);padding:0 10px 0 28px;font-size:13px;color:var(--g900);font-family:'DM Sans',sans-serif;}
+    .sinput:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(29,158,117,.12);background:var(--white);}
+    .sinput::placeholder{color:var(--g400);}
+    .aftags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;}
+    .ftag{display:inline-flex;align-items:center;gap:5px;background:var(--green-light);color:var(--green-dark);border-radius:12px;padding:3px 8px 3px 10px;font-size:11px;font-weight:500;cursor:pointer;}
+    .ftag-x{width:14px;height:14px;border-radius:50%;background:rgba(29,158,117,.2);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;}
+    .pills{display:flex;gap:5px;flex-wrap:wrap;}
+    .pill{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:500;border:1px solid var(--g200);cursor:pointer;color:var(--g600);background:var(--white);user-select:none;transition:all .15s;}
+    .pill.on[data-s="For Sale"]{background:var(--green);color:#fff;border-color:var(--green);}
+    .pill.on[data-s="Sold"]{background:var(--purple);color:#fff;border-color:var(--purple);}
+    .pill.on[data-s="Under Contract"]{background:var(--amber);color:#fff;border-color:var(--amber);}
+    .pill.on[data-s="For Rent"]{background:var(--blue);color:#fff;border-color:var(--blue);}
+    .stats-bar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;padding:10px 14px;border-bottom:1px solid var(--g100);}
+    .scard{background:var(--g50);border-radius:var(--r-md);padding:7px 8px;text-align:center;}
+    .snum{font-size:17px;font-weight:600;}
+    .slbl{font-size:9px;color:var(--g400);margin-top:1px;font-weight:500;text-transform:uppercase;letter-spacing:.4px;}
+    .llist{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:6px;}
+    .llist::-webkit-scrollbar{width:3px;}
+    .llist::-webkit-scrollbar-thumb{background:var(--g200);border-radius:4px;}
+    .lcard{background:var(--white);border:1px solid var(--g200);border-radius:var(--r-lg);padding:11px 12px;cursor:pointer;transition:border-color .15s,box-shadow .15s;}
+    .lcard:hover{border-color:var(--green);}
+    .lcard.sel{border-color:var(--green);border-width:1.5px;box-shadow:0 0 0 3px rgba(29,158,117,.1);}
+    .ctop{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px;}
+    .cadr{font-size:13px;font-weight:600;color:var(--g900);line-height:1.3;}
+    .ctwn{font-size:11px;color:var(--g400);margin-top:1px;}
+    .cprc{font-size:14px;font-weight:600;color:var(--g900);margin-bottom:6px;}
+    .cmeta{display:flex;gap:8px;flex-wrap:wrap;}
+    .cmi{font-size:11px;color:var(--g400);}
+    .badge{font-size:10px;font-weight:600;padding:3px 7px;border-radius:10px;white-space:nowrap;flex-shrink:0;}
+    .b-sale{background:var(--green-light);color:var(--green-dark);}
+    .b-sold{background:var(--purple-light);color:var(--purple);}
+    .b-contract{background:var(--amber-light);color:var(--amber);}
+    .b-rent{background:var(--blue-light);color:var(--blue);}
+    .nores{text-align:center;padding:28px 16px;color:var(--g400);font-size:13px;}
+    .nores-i{font-size:26px;margin-bottom:7px;}
 
-    /* ── TOP BAR ── */
-    .topbar {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      height: 56px;
-      background: var(--white);
-      border-bottom: 1px solid var(--gray-200);
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0 20px;
-      box-shadow: var(--shadow-sm);
-    }
+    /* Leaflet tweaks */
+    .leaflet-control-zoom{border:1px solid var(--g200)!important;border-radius:var(--r-md)!important;overflow:hidden;}
+    .leaflet-control-zoom-in,.leaflet-control-zoom-out{font-family:'DM Sans',sans-serif!important;color:var(--g600)!important;background:var(--white)!important;}
+    .leaflet-control-zoom-in:hover,.leaflet-control-zoom-out:hover{background:var(--g50)!important;}
+    .leaflet-control-attribution{font-size:10px!important;}
+    .sp-pin{width:28px;height:36px;cursor:pointer;transition:transform .15s;transform-origin:bottom center;}
+    .sp-pin:hover,.sp-pin.active{transform:scale(1.25) translateY(-3px);}
 
-    .logo { display: flex; align-items: center; gap: 9px; text-decoration: none; }
-    .logo-mark {
-      width: 30px; height: 30px; border-radius: 9px;
-      background: var(--green);
-      display: flex; align-items: center; justify-content: center;
-    }
-    .logo-mark svg { width: 16px; height: 16px; }
-    .logo-name {
-      font-family: 'DM Serif Display', serif;
-      font-size: 17px; color: var(--gray-900); letter-spacing: -0.2px;
-    }
-    .logo-name span { color: var(--green); }
+    /* Desktop detail panel */
+    .dpanel{position:absolute;right:14px;top:14px;z-index:400;width:285px;background:var(--white);border:1px solid var(--g200);border-radius:var(--r-xl);box-shadow:0 12px 32px rgba(0,0,0,.14);overflow:hidden;opacity:0;pointer-events:none;transform:translateX(12px);transition:opacity .2s,transform .2s;max-height:calc(100vh - var(--bar) - 28px);overflow-y:auto;display:none;}
+    .dpanel.open{opacity:1;pointer-events:all;transform:none;display:block;}
+    .dpanel::-webkit-scrollbar{width:3px;}
+    .dpanel::-webkit-scrollbar-thumb{background:var(--g200);border-radius:4px;}
+    .dhero{width:100%;height:140px;position:relative;display:flex;align-items:center;justify-content:center;}
+    .dhero-icon{font-size:48px;filter:drop-shadow(0 3px 6px rgba(0,0,0,.15));}
+    .dclose{position:absolute;top:9px;right:9px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.22);border:none;color:#fff;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;}
+    .dstatus{position:absolute;bottom:9px;left:9px;}
+    .dbody{padding:13px 15px 4px;}
+    .dadr{font-size:14px;font-weight:600;line-height:1.3;margin-bottom:2px;}
+    .dloc{font-size:12px;color:var(--g400);margin-bottom:9px;}
+    .dprc{font-size:21px;font-weight:700;margin-bottom:12px;font-family:'DM Serif Display',serif;letter-spacing:-.4px;}
+    .dgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;}
+    .dfield{background:var(--g50);border-radius:var(--r-md);padding:8px 10px;}
+    .dflbl{font-size:9px;color:var(--g400);font-weight:600;margin-bottom:2px;text-transform:uppercase;letter-spacing:.4px;}
+    .dfval{font-size:12px;font-weight:600;}
+    .rsec{border-top:1px solid var(--g100);padding:12px 15px 15px;}
+    .rhdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;}
+    .rtitle{font-size:11px;font-weight:600;color:var(--g600);text-transform:uppercase;letter-spacing:.5px;}
+    .dstars{color:#EF9F27;font-size:12px;letter-spacing:1px;}
+    .ri{background:var(--g50);border-radius:var(--r-md);padding:9px 11px;margin-bottom:6px;}
+    .ri:last-child{margin-bottom:0;}
+    .ri-s{color:#EF9F27;font-size:10px;margin-bottom:3px;}
+    .ri-t{font-size:12px;color:var(--g900);line-height:1.5;font-style:italic;margin-bottom:4px;}
+    .ri-a{font-size:11px;color:var(--g400);font-weight:500;}
 
-    .demo-badge {
-      display: flex; align-items: center; gap: 6px;
-      background: var(--amber-light); color: var(--amber);
-      border: 1px solid #EFC97A;
-      border-radius: 20px; padding: 4px 12px;
-      font-size: 12px; font-weight: 500;
-    }
-    .demo-badge::before {
-      content: ''; width: 6px; height: 6px; border-radius: 50%;
-      background: var(--amber); flex-shrink: 0;
-    }
+    /* Map legend */
+    .legend{position:absolute;left:12px;bottom:28px;z-index:400;background:var(--white);border:1px solid var(--g200);border-radius:var(--r-lg);padding:9px 13px;box-shadow:0 1px 3px rgba(0,0,0,.08);}
+    .ltitle{font-size:9px;font-weight:600;color:var(--g400);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;}
+    .li{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--g600);margin-bottom:4px;font-weight:500;}
+    .li:last-child{margin-bottom:0;}
+    .ld{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
 
-    .topbar-right { display: flex; align-items: center; gap: 10px; }
+    /* ═══════════════════════════════════════════
+       MOBILE — pure CSS, no JS toggling needed
+    ═══════════════════════════════════════════ */
+    @media(max-width:768px){
+      :root{--bar:50px;}
 
-    .agent-pill {
-      display: flex; align-items: center; gap: 8px;
-      background: var(--gray-50); border: 1px solid var(--gray-200);
-      border-radius: 22px; padding: 5px 14px 5px 6px; cursor: pointer;
-      transition: border-color 0.15s;
-    }
-    .agent-pill:hover { border-color: var(--gray-400); }
-    .agent-avatar {
-      width: 26px; height: 26px; border-radius: 50%;
-      background: var(--green); display: flex; align-items: center; justify-content: center;
-      font-size: 10px; font-weight: 600; color: #fff; letter-spacing: 0.3px;
-    }
-    .agent-name { font-size: 13px; font-weight: 500; color: var(--gray-900); }
+      /* Hide desktop-only elements */
+      .sidebar{display:none!important;}
+      .dpanel{display:none!important;}
+      .legend{display:none!important;}
+      .av-name{display:none;}
 
-    .cta-btn {
-      background: var(--green); color: white;
-      border: none; border-radius: var(--radius-md);
-      padding: 8px 16px; font-size: 13px; font-weight: 500;
-      cursor: pointer; font-family: 'DM Sans', sans-serif;
-      transition: background 0.15s;
-    }
-    .cta-btn:hover { background: var(--green-dark); }
+      /* Show mobile-only elements */
+      .m-bar{display:flex!important;}
+      .bsheet{display:flex!important;}
+      .mdetail{display:block!important;}
 
-    /* ── MAIN LAYOUT ── */
-    .main {
-      display: flex;
-      height: 100vh;
-      padding-top: 56px;
-    }
+      /* Map fills screen under topbar */
+      .shell{display:block;height:100vh;padding-top:var(--bar);}
+      .mapwrap{position:absolute;top:var(--bar);left:0;right:0;bottom:0;}
+      #map{width:100%;height:100%;min-height:unset;}
 
-    /* ── SIDEBAR ── */
-    .sidebar {
-      width: 320px; flex-shrink: 0;
-      background: var(--white);
-      border-right: 1px solid var(--gray-200);
-      display: flex; flex-direction: column;
-      overflow: hidden;
-    }
+      /* Floating search + pills pinned over map */
+      .m-bar{
+        position:absolute;top:10px;left:10px;right:10px;z-index:500;
+        display:flex;flex-direction:column;gap:7px;
+      }
+      .m-search{
+        width:100%;height:40px;border-radius:20px;
+        border:1px solid var(--g200);background:var(--white);
+        padding:0 18px;font-size:14px;color:var(--g900);
+        font-family:'DM Sans',sans-serif;
+        box-shadow:0 2px 8px rgba(0,0,0,.10);
+      }
+      .m-search:focus{outline:none;border-color:var(--green);}
+      .m-search::placeholder{color:var(--g400);}
+      .m-pills{
+        display:flex;gap:7px;
+        overflow-x:auto;-webkit-overflow-scrolling:touch;
+        padding:2px 0 4px;
+      }
+      .m-pills::-webkit-scrollbar{display:none;}
+      .m-pills .pill{
+        flex-shrink:0;white-space:nowrap;
+        background:var(--white);
+        box-shadow:0 2px 6px rgba(0,0,0,.10);
+        font-size:12px;padding:5px 12px;
+      }
 
-    .filters {
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--gray-100);
-    }
+      /* Bottom sheet */
+      .bsheet{
+        position:fixed;left:0;right:0;bottom:0;z-index:500;
+        background:var(--white);
+        border-radius:18px 18px 0 0;
+        box-shadow:0 -4px 20px rgba(0,0,0,.12);
+        display:flex;flex-direction:column;
+        /* default: peek state — show only handle + header */
+        height:calc(100vh - var(--bar) - 12px);
+        transform:translateY(calc(100% - 90px));
+        transition:transform .35s cubic-bezier(.32,.72,0,1);
+        touch-action:pan-y;
+      }
+      .bsheet.mid{ transform:translateY(calc(100% - 52vh)); }
+      .bsheet.full{ transform:translateY(0); }
 
-    .filter-section-label {
-      font-size: 10px; font-weight: 600; color: var(--gray-400);
-      text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 8px;
-    }
+      .bhandle-wrap{padding:10px 0 4px;display:flex;justify-content:center;flex-shrink:0;cursor:pointer;}
+      .bhandle{width:38px;height:4px;border-radius:2px;background:var(--g200);}
 
-    .search-row { display: flex; gap: 8px; margin-bottom: 12px; }
-    .search-wrap { flex: 1; position: relative; }
-    .search-icon {
-      position: absolute; left: 9px; top: 50%; transform: translateY(-50%);
-      color: var(--gray-400); pointer-events: none;
-    }
-    .search-input {
-      width: 100%; height: 34px; border-radius: var(--radius-md);
-      border: 1px solid var(--gray-200);
-      background: var(--gray-50);
-      padding: 0 10px 0 30px; font-size: 13px; color: var(--gray-900);
-      font-family: 'DM Sans', sans-serif;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .search-input:focus {
-      outline: none; border-color: var(--green);
-      box-shadow: 0 0 0 3px rgba(29,158,117,0.12);
-      background: var(--white);
-    }
-    .search-input::placeholder { color: var(--gray-400); }
+      .bhead{padding:4px 16px 12px;flex-shrink:0;border-bottom:1px solid var(--g100);}
+      .bcount{font-size:14px;font-weight:600;color:var(--g900);}
+      .bstats{display:flex;gap:12px;margin-top:6px;}
+      .bstat{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:500;}
+      .bstat-dot{width:7px;height:7px;border-radius:50%;}
+      .blisting{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:7px;}
+      .blisting::-webkit-scrollbar{display:none;}
 
-    .active-filters { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
-    .filter-tag {
-      display: inline-flex; align-items: center; gap: 5px;
-      background: var(--green-light); color: var(--green-dark);
-      border-radius: 12px; padding: 3px 8px 3px 10px;
-      font-size: 11px; font-weight: 500; cursor: pointer;
-    }
-    .filter-tag-x {
-      width: 14px; height: 14px; border-radius: 50%;
-      background: rgba(29,158,117,0.2);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 9px; color: var(--green-dark); font-weight: 600;
-    }
-
-    .status-pills { display: flex; gap: 5px; flex-wrap: wrap; }
-    .status-pill {
-      padding: 5px 11px; border-radius: 20px; font-size: 12px; font-weight: 500;
-      border: 1px solid var(--gray-200); cursor: pointer;
-      transition: all 0.15s; color: var(--gray-600);
-      background: var(--white); user-select: none;
-    }
-    .status-pill:hover { border-color: var(--gray-400); }
-    .status-pill.on[data-status="For Sale"]    { background: var(--green);  color: #fff; border-color: var(--green); }
-    .status-pill.on[data-status="Sold"]         { background: var(--purple); color: #fff; border-color: var(--purple); }
-    .status-pill.on[data-status="Under Contract"]{ background: var(--amber);  color: #fff; border-color: var(--amber); }
-    .status-pill.on[data-status="For Rent"]     { background: var(--blue);   color: #fff; border-color: var(--blue); }
-
-    /* ── STATS ── */
-    .stats-row {
-      display: grid; grid-template-columns: repeat(4, minmax(0,1fr));
-      gap: 8px; padding: 12px 16px;
-      border-bottom: 1px solid var(--gray-100);
-    }
-    .stat-card {
-      background: var(--gray-50); border-radius: var(--radius-md);
-      padding: 8px 10px; text-align: center;
-    }
-    .stat-num { font-size: 18px; font-weight: 600; }
-    .stat-lbl { font-size: 10px; color: var(--gray-400); margin-top: 1px; font-weight: 500; }
-
-    /* ── LISTING LIST ── */
-    .listing-list {
-      flex: 1; overflow-y: auto; padding: 10px;
-      display: flex; flex-direction: column; gap: 6px;
-    }
-    .listing-list::-webkit-scrollbar { width: 4px; }
-    .listing-list::-webkit-scrollbar-track { background: transparent; }
-    .listing-list::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 4px; }
-
-    .listing-card {
-      background: var(--white); border: 1px solid var(--gray-200);
-      border-radius: var(--radius-lg); padding: 12px 13px;
-      cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .listing-card:hover { border-color: var(--green); box-shadow: var(--shadow-sm); }
-    .listing-card.selected { border-color: var(--green); border-width: 1.5px; box-shadow: 0 0 0 3px rgba(29,158,117,0.1); }
-
-    .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 5px; }
-    .card-address { font-size: 13px; font-weight: 600; color: var(--gray-900); line-height: 1.3; }
-    .card-town { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
-    .card-price { font-size: 15px; font-weight: 600; color: var(--gray-900); margin-bottom: 7px; }
-    .card-meta { display: flex; gap: 10px; flex-wrap: wrap; }
-    .card-meta-item { font-size: 11px; color: var(--gray-400); display: flex; align-items: center; gap: 3px; }
-
-    .status-badge {
-      font-size: 10px; font-weight: 600; padding: 3px 8px;
-      border-radius: 10px; white-space: nowrap; flex-shrink: 0;
-    }
-    .badge-sale     { background: var(--green-light);  color: var(--green-dark); }
-    .badge-sold     { background: var(--purple-light); color: var(--purple); }
-    .badge-contract { background: var(--amber-light);  color: var(--amber); }
-    .badge-rent     { background: var(--blue-light);   color: var(--blue); }
-
-    .no-results {
-      text-align: center; padding: 32px 16px;
-      color: var(--gray-400); font-size: 13px;
-    }
-    .no-results-icon { font-size: 28px; margin-bottom: 8px; }
-
-    /* ── MAP ── */
-    .map-area {
-      flex: 1; position: relative; overflow: hidden;
-      background: #dce9d6;
-    }
-    .map-svg { width: 100%; height: 100%; display: block; }
-
-    .map-pin { cursor: pointer; transition: transform 0.15s; transform-box: fill-box; transform-origin: bottom center; }
-    .map-pin:hover { transform: scale(1.2) translateY(-2px); }
-    .map-pin.selected-pin { transform: scale(1.25) translateY(-3px); }
-
-    /* ── DETAIL PANEL ── */
-    .detail-panel {
-      position: absolute; right: 16px; top: 16px;
-      width: 290px;
-      background: var(--white);
-      border: 1px solid var(--gray-200);
-      border-radius: var(--radius-xl);
-      box-shadow: var(--shadow-lg);
-      overflow: hidden;
-      opacity: 0; transform: translateX(20px) scale(0.98);
-      transition: opacity 0.2s, transform 0.2s;
-      pointer-events: none;
-      max-height: calc(100vh - 88px);
-      overflow-y: auto;
-    }
-    .detail-panel.open {
-      opacity: 1; transform: translateX(0) scale(1);
-      pointer-events: all;
-    }
-    .detail-panel::-webkit-scrollbar { width: 4px; }
-    .detail-panel::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 4px; }
-
-    .detail-hero {
-      width: 100%; height: 150px; position: relative;
-      background: linear-gradient(135deg, #9FE1CB 0%, #3DBFA0 100%);
-      display: flex; align-items: center; justify-content: center;
-    }
-    .detail-hero-icon { font-size: 52px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15)); }
-    .detail-close {
-      position: absolute; top: 10px; right: 10px;
-      width: 26px; height: 26px; border-radius: 50%;
-      background: rgba(0,0,0,0.25); border: none; color: #fff;
-      cursor: pointer; font-size: 13px; display: flex;
-      align-items: center; justify-content: center;
-      transition: background 0.15s;
-    }
-    .detail-close:hover { background: rgba(0,0,0,0.4); }
-    .detail-status-badge {
-      position: absolute; bottom: 10px; left: 10px;
-      font-size: 10px; font-weight: 600; padding: 4px 10px; border-radius: 10px;
+      /* Full-screen property detail */
+      .mdetail{
+        position:fixed;inset:0;z-index:700;
+        background:var(--white);
+        transform:translateY(100%);
+        transition:transform .3s cubic-bezier(.32,.72,0,1);
+        overflow-y:auto;
+        padding-top:var(--bar);
+      }
+      .mdetail.open{transform:translateY(0);}
+      .mdetail::-webkit-scrollbar{display:none;}
+      .md-hero{width:100%;height:220px;position:relative;display:flex;align-items:center;justify-content:center;}
+      .md-icon{font-size:70px;filter:drop-shadow(0 4px 10px rgba(0,0,0,.15));}
+      .md-back{
+        position:absolute;top:12px;left:12px;
+        width:36px;height:36px;border-radius:50%;
+        background:rgba(0,0,0,.25);border:none;color:#fff;
+        cursor:pointer;font-size:20px;line-height:1;
+        display:flex;align-items:center;justify-content:center;
+      }
+      .md-badge-pos{position:absolute;bottom:10px;left:14px;}
+      .md-body{padding:20px 16px 4px;}
+      .md-adr{font-size:19px;font-weight:700;line-height:1.3;margin-bottom:3px;}
+      .md-loc{font-size:13px;color:var(--g400);margin-bottom:10px;}
+      .md-prc{font-size:30px;font-weight:700;margin-bottom:18px;font-family:'DM Serif Display',serif;letter-spacing:-.5px;}
+      .md-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:20px;}
+      .md-field{background:var(--g50);border-radius:var(--r-md);padding:12px 13px;}
+      .md-flbl{font-size:10px;color:var(--g400);font-weight:600;margin-bottom:3px;text-transform:uppercase;letter-spacing:.4px;}
+      .md-fval{font-size:14px;font-weight:600;color:var(--g900);}
+      .md-rev{border-top:1px solid var(--g100);padding:18px 16px 32px;}
+      .md-rhdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+      .md-rtitle{font-size:12px;font-weight:700;color:var(--g600);text-transform:uppercase;letter-spacing:.5px;}
+      .md-ri{background:var(--g50);border-radius:var(--r-md);padding:13px 14px;margin-bottom:9px;}
+      .md-ri-s{color:#EF9F27;font-size:12px;margin-bottom:5px;}
+      .md-ri-t{font-size:13px;color:var(--g900);line-height:1.55;font-style:italic;margin-bottom:5px;}
+      .md-ri-a{font-size:12px;color:var(--g400);font-weight:500;}
     }
 
-    .detail-body { padding: 14px 16px; }
-    .detail-address { font-size: 15px; font-weight: 600; color: var(--gray-900); margin-bottom: 2px; line-height: 1.3; }
-    .detail-location { font-size: 12px; color: var(--gray-400); margin-bottom: 10px; }
-    .detail-price { font-size: 22px; font-weight: 700; color: var(--gray-900); margin-bottom: 14px; font-family: 'DM Serif Display', serif; letter-spacing: -0.5px; }
-
-    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 14px; }
-    .detail-field {
-      background: var(--gray-50); border-radius: var(--radius-md);
-      padding: 9px 11px;
-    }
-    .detail-field-lbl { font-size: 10px; color: var(--gray-400); font-weight: 500; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.4px; }
-    .detail-field-val { font-size: 13px; font-weight: 600; color: var(--gray-900); }
-
-    .reviews-section {
-      border-top: 1px solid var(--gray-100);
-      padding: 14px 16px 16px;
-    }
-    .reviews-header {
-      display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
-    }
-    .reviews-title { font-size: 12px; font-weight: 600; color: var(--gray-600); text-transform: uppercase; letter-spacing: 0.5px; }
-    .stars-display { color: #EF9F27; font-size: 13px; letter-spacing: 1px; }
-
-    .review-item {
-      background: var(--gray-50); border-radius: var(--radius-md);
-      padding: 10px 12px; margin-bottom: 7px;
-    }
-    .review-item:last-child { margin-bottom: 0; }
-    .review-text { font-size: 12px; color: var(--gray-900); line-height: 1.55; margin-bottom: 5px; font-style: italic; }
-    .review-author { font-size: 11px; color: var(--gray-400); font-weight: 500; }
-    .review-stars { color: #EF9F27; font-size: 10px; margin-bottom: 4px; }
-
-    /* ── MAP LEGEND ── */
-    .map-legend {
-      position: absolute; left: 14px; bottom: 14px;
-      background: var(--white); border: 1px solid var(--gray-200);
-      border-radius: var(--radius-lg); padding: 10px 14px;
-      box-shadow: var(--shadow-sm);
-    }
-    .legend-title { font-size: 10px; font-weight: 600; color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 7px; }
-    .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--gray-600); margin-bottom: 5px; font-weight: 500; }
-    .legend-item:last-child { margin-bottom: 0; }
-    .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-
-    /* ── MAP CONTROLS ── */
-    .map-controls {
-      position: absolute; right: 14px; bottom: 14px;
-      display: flex; flex-direction: column; gap: 5px;
-    }
-    .map-btn {
-      width: 32px; height: 32px; border-radius: var(--radius-md);
-      background: var(--white); border: 1px solid var(--gray-200);
-      cursor: pointer; font-size: 17px; color: var(--gray-600);
-      display: flex; align-items: center; justify-content: center;
-      box-shadow: var(--shadow-sm); transition: background 0.15s;
-      font-family: 'DM Sans', sans-serif; line-height: 1;
-    }
-    .map-btn:hover { background: var(--gray-50); }
-
-    /* ── REQUEST ACCESS MODAL ── */
-    .modal-backdrop {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.45);
-      z-index: 200; display: flex; align-items: center; justify-content: center;
-      opacity: 0; pointer-events: none; transition: opacity 0.2s;
-    }
-    .modal-backdrop.open { opacity: 1; pointer-events: all; }
-    .modal {
-      background: var(--white); border-radius: var(--radius-xl);
-      padding: 32px; width: 380px; max-width: calc(100vw - 32px);
-      box-shadow: var(--shadow-lg);
-      transform: translateY(16px) scale(0.98);
-      transition: transform 0.2s;
-    }
-    .modal-backdrop.open .modal { transform: translateY(0) scale(1); }
-    .modal-logo { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
-    .modal-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--gray-900); margin-bottom: 6px; }
-    .modal-sub { font-size: 13px; color: var(--gray-400); margin-bottom: 22px; line-height: 1.6; }
-    .modal-field { margin-bottom: 12px; }
-    .modal-label { font-size: 11px; font-weight: 600; color: var(--gray-600); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; display: block; }
-    .modal-input {
-      width: 100%; height: 38px; border: 1px solid var(--gray-200);
-      border-radius: var(--radius-md); padding: 0 12px;
-      font-size: 14px; color: var(--gray-900); font-family: 'DM Sans', sans-serif;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .modal-input:focus {
-      outline: none; border-color: var(--green);
-      box-shadow: 0 0 0 3px rgba(29,158,117,0.12);
-    }
-    .modal-input::placeholder { color: var(--gray-400); }
-    .modal-btn-row { display: flex; gap: 8px; margin-top: 20px; }
-    .modal-submit {
-      flex: 1; height: 40px; background: var(--green); color: white;
-      border: none; border-radius: var(--radius-md); font-size: 14px; font-weight: 600;
-      cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.15s;
-    }
-    .modal-submit:hover { background: var(--green-dark); }
-    .modal-cancel {
-      height: 40px; padding: 0 16px; background: transparent; color: var(--gray-400);
-      border: 1px solid var(--gray-200); border-radius: var(--radius-md);
-      font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif;
-      transition: background 0.15s;
-    }
-    .modal-cancel:hover { background: var(--gray-50); }
-    .modal-success { text-align: center; padding: 12px 0; }
-    .modal-success-icon { font-size: 40px; margin-bottom: 12px; }
-    .modal-success-title { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--gray-900); margin-bottom: 8px; }
-    .modal-success-text { font-size: 13px; color: var(--gray-400); line-height: 1.6; }
+    /* MODAL */
+    .mback{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:900;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;padding:16px;}
+    .mback.open{opacity:1;pointer-events:all;}
+    .modal{background:var(--white);border-radius:var(--r-xl);padding:28px;width:100%;max-width:370px;box-shadow:0 12px 32px rgba(0,0,0,.14);transform:translateY(16px);transition:transform .2s;}
+    .mback.open .modal{transform:none;}
+    .mlogo{display:flex;align-items:center;gap:8px;margin-bottom:18px;}
+    .mt{font-family:'DM Serif Display',serif;font-size:21px;margin-bottom:5px;}
+    .ms{font-size:13px;color:var(--g400);margin-bottom:20px;line-height:1.6;}
+    .mf{margin-bottom:11px;}
+    .ml{font-size:10px;font-weight:600;color:var(--g600);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;display:block;}
+    .mi{width:100%;height:38px;border:1px solid var(--g200);border-radius:var(--r-md);padding:0 12px;font-size:14px;color:var(--g900);font-family:'DM Sans',sans-serif;}
+    .mi:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(29,158,117,.12);}
+    .mi::placeholder{color:var(--g400);}
+    .mbr{display:flex;gap:8px;margin-top:18px;}
+    .msbtn{flex:1;height:40px;background:var(--green);color:#fff;border:none;border-radius:var(--r-md);font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;}
+    .msbtn:hover{background:var(--green-dark);}
+    .mxbtn{height:40px;padding:0 15px;background:transparent;color:var(--g400);border:1px solid var(--g200);border-radius:var(--r-md);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+    .msuc{text-align:center;padding:10px 0;}
+    .msuc-i{font-size:38px;margin-bottom:10px;}
+    .msuc-t{font-family:'DM Serif Display',serif;font-size:20px;margin-bottom:7px;}
+    .msuc-s{font-size:13px;color:var(--g400);line-height:1.6;}
   </style>
 </head>
 <body>
 
-<!-- TOP BAR -->
-<div class="topbar">
+<!-- TOPBAR -->
+<div class="bar">
   <a class="logo" href="#">
     <div class="logo-mark">
-      <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M8 1.5C5.1 1.5 2.75 3.85 2.75 6.75C2.75 10.9 8 14.5 8 14.5C8 14.5 13.25 10.9 13.25 6.75C13.25 3.85 10.9 1.5 8 1.5Z" stroke="white" stroke-width="1.5" fill="none"/>
-        <circle cx="8" cy="6.75" r="2" fill="white"/>
-      </svg>
+      <svg viewBox="0 0 16 16" fill="none"><path d="M8 1.5C5.1 1.5 2.75 3.85 2.75 6.75C2.75 10.9 8 14.5 8 14.5S13.25 10.9 13.25 6.75C13.25 3.85 10.9 1.5 8 1.5Z" stroke="white" stroke-width="1.5" fill="none"/><circle cx="8" cy="6.75" r="2" fill="white"/></svg>
     </div>
     <span class="logo-name">Social<span>Proof</span></span>
   </a>
-  <div class="demo-badge">Prototype Demo</div>
-  <div class="topbar-right">
-    <div class="agent-pill">
-      <div class="agent-avatar">JM</div>
-      <span class="agent-name">Jennifer Mills Realty</span>
-    </div>
-    <button class="cta-btn" id="request-access-btn">Request Access</button>
+  <div class="bar-right">
+    <div class="chip">Prototype</div>
+    <div class="av-pill"><div class="av">JM</div><span class="av-name">Jennifer Mills Realty</span></div>
+    <button class="cta-btn" id="req-btn">Request Access</button>
   </div>
 </div>
 
-<!-- MAIN -->
-<div class="main">
+<!-- SHELL -->
+<div class="shell">
 
-  <!-- SIDEBAR -->
+  <!-- DESKTOP SIDEBAR -->
   <div class="sidebar">
     <div class="filters">
-      <div class="filter-section-label">Filter by location</div>
-      <div class="search-row">
-        <div class="search-wrap">
-          <svg class="search-icon" width="13" height="13" viewBox="0 0 16 16" fill="none">
-            <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.5"/>
-            <path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
-          <input class="search-input" id="zip-input" placeholder="Zip code" maxlength="5" />
+      <div class="flbl">Filter by location</div>
+      <div class="srow">
+        <div class="swrap">
+          <svg class="sico" width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <input class="sinput" id="zip-in" placeholder="Zip code" maxlength="5"/>
         </div>
-        <div class="search-wrap">
-          <svg class="search-icon" width="13" height="13" viewBox="0 0 16 16" fill="none">
-            <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.5"/>
-            <path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
-          <input class="search-input" id="town-input" placeholder="Town name" />
+        <div class="swrap">
+          <svg class="sico" width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <input class="sinput" id="town-in" placeholder="Town name"/>
         </div>
       </div>
-      <div class="active-filters" id="active-filters"></div>
-      <div class="filter-section-label">Status</div>
-      <div class="status-pills">
-        <div class="status-pill on" data-status="For Sale">For Sale</div>
-        <div class="status-pill on" data-status="Sold">Sold</div>
-        <div class="status-pill on" data-status="Under Contract">Under Contract</div>
-        <div class="status-pill on" data-status="For Rent">For Rent</div>
+      <div class="aftags" id="aftags"></div>
+      <div class="flbl">Status</div>
+      <div class="pills" id="d-pills">
+        <div class="pill on" data-s="For Sale">For Sale</div>
+        <div class="pill on" data-s="Sold">Sold</div>
+        <div class="pill on" data-s="Under Contract">Under Contract</div>
+        <div class="pill on" data-s="For Rent">For Rent</div>
       </div>
     </div>
-
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-num" id="stat-total">0</div>
-        <div class="stat-lbl">Total</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-num" id="stat-sale" style="color:var(--green)">0</div>
-        <div class="stat-lbl">For Sale</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-num" id="stat-sold" style="color:var(--purple)">0</div>
-        <div class="stat-lbl">Sold</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-num" id="stat-contract" style="color:var(--amber)">0</div>
-        <div class="stat-lbl">Contract</div>
-      </div>
+    <div class="stats-bar">
+      <div class="scard"><div class="snum" id="st-tot">0</div><div class="slbl">Total</div></div>
+      <div class="scard"><div class="snum" id="st-sale" style="color:var(--green)">0</div><div class="slbl">Sale</div></div>
+      <div class="scard"><div class="snum" id="st-sold" style="color:var(--purple)">0</div><div class="slbl">Sold</div></div>
+      <div class="scard"><div class="snum" id="st-con" style="color:var(--amber)">0</div><div class="slbl">Contract</div></div>
     </div>
-
-    <div class="listing-list" id="listing-list"></div>
+    <div class="llist" id="llist"></div>
   </div>
 
-  <!-- MAP -->
-  <div class="map-area">
-    <svg class="map-svg" id="map-svg" viewBox="0 0 900 650" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
-          <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#c4d8be" stroke-width="0.6"/>
-        </pattern>
-      </defs>
-      <rect width="900" height="650" fill="#dce9d6"/>
-      <rect width="900" height="650" fill="url(#grid)" opacity="0.4"/>
-      <!-- Land masses -->
-      <path d="M 80 120 Q 200 90 380 110 Q 500 125 620 100 Q 740 80 840 130 L 840 500 Q 720 525 580 510 Q 440 495 300 518 Q 180 535 80 510 Z" fill="#cddec7" opacity="0.55"/>
-      <path d="M 200 165 Q 310 150 380 175 Q 460 200 530 185 Q 610 168 690 190 Q 750 205 780 235 L 780 430 Q 700 452 610 440 Q 510 425 420 442 Q 330 458 240 440 Q 180 428 190 395 Z" fill="#bdd4b7" opacity="0.6"/>
-      <!-- District blocks -->
-      <rect x="230" y="215" width="90" height="55" rx="6" fill="#b2cead" opacity="0.65"/>
-      <rect x="410" y="200" width="70" height="48" rx="6" fill="#b2cead" opacity="0.65"/>
-      <rect x="540" y="220" width="80" height="50" rx="6" fill="#b2cead" opacity="0.65"/>
-      <rect x="660" y="195" width="75" height="45" rx="6" fill="#b2cead" opacity="0.65"/>
-      <!-- Water feature -->
-      <path d="M 80 490 Q 200 475 380 490 Q 500 500 620 480 Q 730 462 840 490 L 840 650 L 80 650 Z" fill="#b8d4e8" opacity="0.45"/>
-      <!-- Forest patches -->
-      <ellipse cx="148" cy="290" rx="55" ry="40" fill="#9dbf97" opacity="0.5"/>
-      <ellipse cx="730" cy="175" rx="60" ry="35" fill="#9dbf97" opacity="0.5"/>
-      <ellipse cx="160" cy="390" rx="50" ry="38" fill="#9dbf97" opacity="0.45"/>
-      <!-- Town labels -->
-      <text x="253" y="247" font-size="10" fill="#7a9975" font-family="DM Sans, sans-serif" font-weight="500" opacity="0.9">New Haven</text>
-      <text x="418" y="228" font-size="10" fill="#7a9975" font-family="DM Sans, sans-serif" font-weight="500" opacity="0.9">West Haven</text>
-      <text x="550" y="248" font-size="10" fill="#7a9975" font-family="DM Sans, sans-serif" font-weight="500" opacity="0.9">Milford</text>
-      <text x="668" y="222" font-size="10" fill="#7a9975" font-family="DM Sans, sans-serif" font-weight="500" opacity="0.9">Branford</text>
-      <text x="150" y="355" font-size="10" fill="#7a9975" font-family="DM Sans, sans-serif" font-weight="500" opacity="0.9">Orange</text>
-      <!-- Road lines -->
-      <path d="M 80 320 L 840 320" stroke="#c0d4ba" stroke-width="2" stroke-dasharray="6,5" opacity="0.5"/>
-      <path d="M 370 120 L 370 510" stroke="#c0d4ba" stroke-width="2" stroke-dasharray="6,5" opacity="0.5"/>
-      <path d="M 200 120 Q 220 320 200 510" stroke="#c0d4ba" stroke-width="1.5" stroke-dasharray="4,5" opacity="0.4"/>
-      <g id="pins-layer"></g>
-    </svg>
+  <!-- MAP AREA -->
+  <div class="mapwrap">
+    <div id="map"></div>
 
-    <!-- Legend -->
-    <div class="map-legend">
-      <div class="legend-title">Portfolio</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>For Sale</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div>Sold</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div>Under Contract</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div>For Rent</div>
+    <!-- MOBILE: floating search bar + pills over map -->
+    <div class="m-bar">
+      <input class="m-search" id="m-search" placeholder="Search by zip code or town…"/>
+      <div class="m-pills" id="m-pills">
+        <div class="pill on" data-s="For Sale">For Sale</div>
+        <div class="pill on" data-s="Sold">Sold</div>
+        <div class="pill on" data-s="Under Contract">Under Contract</div>
+        <div class="pill on" data-s="For Rent">For Rent</div>
+      </div>
     </div>
 
-    <!-- Map controls -->
-    <div class="map-controls">
-      <button class="map-btn" id="zoom-in" title="Zoom in">+</button>
-      <button class="map-btn" id="zoom-out" title="Zoom out">−</button>
+    <!-- DESKTOP: detail panel -->
+    <div class="dpanel" id="dpanel">
+      <div class="dhero" id="dhero">
+        <div class="dhero-icon" id="d-icon">🏠</div>
+        <button class="dclose" id="dclose">✕</button>
+        <div class="dstatus badge" id="d-badge"></div>
+      </div>
+      <div class="dbody">
+        <div class="dadr" id="d-adr"></div>
+        <div class="dloc" id="d-loc"></div>
+        <div class="dprc" id="d-prc"></div>
+        <div class="dgrid" id="d-grid"></div>
+      </div>
+      <div class="rsec">
+        <div class="rhdr"><div class="rtitle">Client Reviews</div><div class="dstars" id="d-stars"></div></div>
+        <div id="d-revs"></div>
+      </div>
     </div>
 
-    <!-- Detail panel -->
-    <div class="detail-panel" id="detail-panel">
-      <div class="detail-hero" id="detail-hero">
-        <div class="detail-hero-icon" id="detail-icon">🏠</div>
-        <button class="detail-close" id="detail-close" aria-label="Close">✕</button>
-        <div class="detail-status-badge" id="detail-badge"></div>
-      </div>
-      <div class="detail-body">
-        <div class="detail-address" id="detail-address"></div>
-        <div class="detail-location" id="detail-location"></div>
-        <div class="detail-price" id="detail-price"></div>
-        <div class="detail-grid" id="detail-grid"></div>
-      </div>
-      <div class="reviews-section">
-        <div class="reviews-header">
-          <div class="reviews-title">Client Reviews</div>
-          <div class="stars-display" id="detail-stars">★★★★★</div>
-        </div>
-        <div id="detail-reviews"></div>
-      </div>
+    <!-- DESKTOP: legend -->
+    <div class="legend">
+      <div class="ltitle">Portfolio</div>
+      <div class="li"><div class="ld" style="background:var(--green)"></div>For Sale</div>
+      <div class="li"><div class="ld" style="background:var(--purple)"></div>Sold</div>
+      <div class="li"><div class="ld" style="background:var(--amber)"></div>Under Contract</div>
+      <div class="li"><div class="ld" style="background:var(--blue)"></div>For Rent</div>
     </div>
   </div>
 </div>
 
-<!-- REQUEST ACCESS MODAL -->
-<div class="modal-backdrop" id="modal-backdrop">
+<!-- MOBILE: bottom sheet -->
+<div class="bsheet" id="bsheet">
+  <div class="bhandle-wrap" id="bhandle-wrap"><div class="bhandle"></div></div>
+  <div class="bhead">
+    <div class="bcount" id="bcnt">12 properties</div>
+    <div class="bstats">
+      <div class="bstat"><div class="bstat-dot" style="background:var(--green)"></div><span id="bs-sale" style="color:var(--green)">0 For Sale</span></div>
+      <div class="bstat"><div class="bstat-dot" style="background:var(--purple)"></div><span id="bs-sold" style="color:var(--purple)">0 Sold</span></div>
+      <div class="bstat"><div class="bstat-dot" style="background:var(--amber)"></div><span id="bs-con" style="color:var(--amber)">0 Contract</span></div>
+    </div>
+  </div>
+  <div class="blisting" id="blisting"></div>
+</div>
+
+<!-- MOBILE: full-screen detail -->
+<div class="mdetail" id="mdetail">
+  <div class="md-hero" id="md-hero">
+    <div class="md-icon" id="md-icon">🏠</div>
+    <button class="md-back" id="md-back">‹</button>
+    <div class="md-badge-pos"><div class="badge" id="md-badge"></div></div>
+  </div>
+  <div class="md-body">
+    <div class="md-adr" id="md-adr"></div>
+    <div class="md-loc" id="md-loc"></div>
+    <div class="md-prc" id="md-prc"></div>
+    <div class="md-grid" id="md-grid"></div>
+  </div>
+  <div class="md-rev">
+    <div class="md-rhdr"><div class="md-rtitle">Client Reviews</div><div class="dstars" id="md-stars"></div></div>
+    <div id="md-revs"></div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="mback" id="mback">
   <div class="modal">
-    <div class="modal-logo">
-      <div class="logo-mark"><svg viewBox="0 0 16 16" fill="none"><path d="M8 1.5C5.1 1.5 2.75 3.85 2.75 6.75C2.75 10.9 8 14.5 8 14.5C8 14.5 13.25 10.9 13.25 6.75C13.25 3.85 10.9 1.5 8 1.5Z" stroke="white" stroke-width="1.5" fill="none"/><circle cx="8" cy="6.75" r="2" fill="white"/></svg></div>
+    <div class="mlogo">
+      <div class="logo-mark" style="width:28px;height:28px"><svg viewBox="0 0 16 16" fill="none" style="width:15px;height:15px"><path d="M8 1.5C5.1 1.5 2.75 3.85 2.75 6.75C2.75 10.9 8 14.5 8 14.5S13.25 10.9 13.25 6.75C13.25 3.85 10.9 1.5 8 1.5Z" stroke="white" stroke-width="1.5" fill="none"/><circle cx="8" cy="6.75" r="2" fill="white"/></svg></div>
       <span class="logo-name">Social<span>Proof</span></span>
     </div>
-    <div id="modal-body">
-      <div class="modal-title">Get early access</div>
-      <div class="modal-sub">Be among the first Connecticut realtors to showcase your portfolio with real-time maps and client reviews.</div>
-      <div class="modal-field">
-        <label class="modal-label" for="m-name">Full name</label>
-        <input class="modal-input" id="m-name" placeholder="Jane Smith" type="text" />
-      </div>
-      <div class="modal-field">
-        <label class="modal-label" for="m-email">Email address</label>
-        <input class="modal-input" id="m-email" placeholder="jane@smithrealty.com" type="email" />
-      </div>
-      <div class="modal-field">
-        <label class="modal-label" for="m-brokerage">Brokerage / Agency</label>
-        <input class="modal-input" id="m-brokerage" placeholder="Smith Realty Group" type="text" />
-      </div>
-      <div class="modal-field">
-        <label class="modal-label" for="m-mls">SmartMLS Member ID (optional)</label>
-        <input class="modal-input" id="m-mls" placeholder="e.g. 12345" type="text" />
-      </div>
-      <div class="modal-btn-row">
-        <button class="modal-submit" id="modal-submit">Request Access →</button>
-        <button class="modal-cancel" id="modal-cancel">Cancel</button>
+    <div id="mbody">
+      <div class="mt">Get early access</div>
+      <div class="ms">Be among the first Connecticut realtors to showcase your portfolio with real-time maps and client reviews.</div>
+      <div class="mf"><label class="ml" for="m-nm">Full name</label><input class="mi" id="m-nm" placeholder="Jane Smith" type="text"/></div>
+      <div class="mf"><label class="ml" for="m-em">Email address</label><input class="mi" id="m-em" placeholder="jane@smithrealty.com" type="email"/></div>
+      <div class="mf"><label class="ml" for="m-br">Brokerage / Agency</label><input class="mi" id="m-br" placeholder="Smith Realty Group" type="text"/></div>
+      <div class="mf"><label class="ml" for="m-ml">SmartMLS Member ID (optional)</label><input class="mi" id="m-ml" placeholder="e.g. 12345" type="text"/></div>
+      <div class="mbr">
+        <button class="msbtn" id="msub">Request Access →</button>
+        <button class="mxbtn" id="mcan">Cancel</button>
       </div>
     </div>
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
-  const listings = [
-    { id:1,  address:"142 Savin Rock Blvd", town:"West Haven",  zip:"06516", status:"For Sale",       type:"Single Family", price:485000, sqft:1820, landSqft:6200,  beds:3, baths:2,   icon:"🏠", hue:"#9FE1CB", x:440, y:305, reviews:[{text:"Jennifer was incredible — found us our dream home in two weeks.", author:"The Marchetti Family", stars:5},{text:"Smooth process from start to finish. Highly recommend.", author:"D. Okafor", stars:5}] },
-    { id:2,  address:"88 Campbell Ave",     town:"West Haven",  zip:"06516", status:"Sold",            type:"Condo",         price:310000, sqft:1100, landSqft:0,     beds:2, baths:1,   icon:"🏢", hue:"#CEC8F6", x:465, y:328, reviews:[{text:"Sold above asking price in 6 days. Phenomenal.", author:"R. & S. Navarro", stars:5},{text:"Professional and always responsive.", author:"T. Gibbons", stars:4}] },
-    { id:3,  address:"305 Ocean Ave",       town:"West Haven",  zip:"06516", status:"Under Contract", type:"Single Family", price:525000, sqft:2100, landSqft:8400,  beds:4, baths:2.5, icon:"🏠", hue:"#FAC775", x:450, y:355, reviews:[{text:"Stress-free experience. Jennifer knows this market cold.", author:"The Park Family", stars:5}] },
-    { id:4,  address:"22 Elm St Unit 4",    town:"New Haven",   zip:"06510", status:"For Rent",        type:"Apartment",     price:1850,   sqft:780,  landSqft:0,     beds:1, baths:1,   icon:"🏙️", hue:"#B5D4F4", x:305, y:270, reviews:[{text:"Found qualified tenants within a week. Amazing service.", author:"Property Owner", stars:5}] },
-    { id:5,  address:"77 Forest Rd",        town:"Orange",      zip:"06477", status:"For Sale",       type:"Single Family", price:629000, sqft:2650, landSqft:18500, beds:4, baths:3,   icon:"🏡", hue:"#9FE1CB", x:195, y:355, reviews:[{text:"Best agent in the area, no question.", author:"K. Thompson", stars:5},{text:"Handled everything flawlessly.", author:"M. & J. Chen", stars:5}] },
-    { id:6,  address:"14 Harbor View Dr",   town:"Milford",     zip:"06460", status:"Sold",            type:"Single Family", price:712000, sqft:3100, landSqft:12000, beds:5, baths:3,   icon:"🏠", hue:"#CEC8F6", x:590, y:300, reviews:[{text:"Got $40k over asking price. Jennifer is a rockstar.", author:"The Williams Family", stars:5}] },
-    { id:7,  address:"200 Whalley Ave",     town:"New Haven",   zip:"06515", status:"For Sale",       type:"Multi-Family",  price:595000, sqft:3400, landSqft:5800,  beds:6, baths:4,   icon:"🏘️", hue:"#9FE1CB", x:275, y:298, reviews:[{text:"Excellent investment property find. Very knowledgeable.", author:"P. Rosario", stars:4}] },
-    { id:8,  address:"55 Boston Post Rd",   town:"Milford",     zip:"06460", status:"For Rent",        type:"Commercial",    price:3200,   sqft:1900, landSqft:0,     beds:0, baths:2,   icon:"🏪", hue:"#B5D4F4", x:618, y:335, reviews:[{text:"Had our space leased in under 3 weeks.", author:"Sunrise Wellness LLC", stars:5}] },
-    { id:9,  address:"9 Merwin Ave",        town:"Milford",     zip:"06461", status:"Under Contract", type:"Condo",         price:298000, sqft:990,  landSqft:0,     beds:2, baths:1,   icon:"🏢", hue:"#FAC775", x:648, y:365, reviews:[{text:"Smooth negotiation from start to finish.", author:"First-time Buyer", stars:5}] },
-    { id:10, address:"310 Foxon Rd",        town:"Branford",    zip:"06405", status:"For Sale",       type:"Single Family", price:449000, sqft:1740, landSqft:9200,  beds:3, baths:2,   icon:"🏠", hue:"#9FE1CB", x:714, y:255, reviews:[{text:"Jennifer found buyers we never would have reached.", author:"The Sorensen Family", stars:5}] },
-    { id:11, address:"7 Main St Unit 2B",   town:"New Haven",   zip:"06511", status:"Sold",            type:"Apartment",     price:275000, sqft:860,  landSqft:0,     beds:2, baths:1,   icon:"🏙️", hue:"#CEC8F6", x:320, y:248, reviews:[{text:"Record sale price for the building. Incredible result.", author:"Investor Client", stars:5}] },
-    { id:12, address:"44 River St",         town:"West Haven",  zip:"06516", status:"Under Contract", type:"Single Family", price:392000, sqft:1560, landSqft:5400,  beds:3, baths:2,   icon:"🏠", hue:"#FAC775", x:472, y:280, reviews:[{text:"Jennifer kept us calm through a competitive bidding war.", author:"The Dubois Family", stars:5}] },
-  ];
+const DATA=[
+  {id:1,addr:"142 Savin Rock Blvd",town:"West Haven",zip:"06516",status:"For Sale",type:"Single Family",price:485000,sqft:1820,land:6200,beds:3,baths:2,icon:"🏠",lat:41.2665,lng:-72.9654,grad:"135deg,#9FE1CB,#3DBFA0",reviews:[{t:"Jennifer was incredible — found us our dream home in two weeks.",a:"The Marchetti Family",s:5},{t:"Smooth process from start to finish.",a:"D. Okafor",s:5}]},
+  {id:2,addr:"88 Campbell Ave",town:"West Haven",zip:"06516",status:"Sold",type:"Condo",price:310000,sqft:1100,land:0,beds:2,baths:1,icon:"🏢",lat:41.2712,lng:-72.9588,grad:"135deg,#CEC8F6,#8F88E0",reviews:[{t:"Sold above asking in 6 days. Phenomenal.",a:"R. & S. Navarro",s:5},{t:"Professional and always responsive.",a:"T. Gibbons",s:4}]},
+  {id:3,addr:"305 Ocean Ave",town:"West Haven",zip:"06516",status:"Under Contract",type:"Single Family",price:525000,sqft:2100,land:8400,beds:4,baths:2.5,icon:"🏠",lat:41.2589,lng:-72.9701,grad:"135deg,#FAC775,#EF9F27",reviews:[{t:"Stress-free experience. Jennifer knows this market cold.",a:"The Park Family",s:5}]},
+  {id:4,addr:"22 Elm St Unit 4",town:"New Haven",zip:"06510",status:"For Rent",type:"Apartment",price:1850,sqft:780,land:0,beds:1,baths:1,icon:"🏙️",lat:41.3083,lng:-72.9279,grad:"135deg,#B5D4F4,#6AAEE8",reviews:[{t:"Found qualified tenants within a week.",a:"Property Owner",s:5}]},
+  {id:5,addr:"77 Forest Rd",town:"Orange",zip:"06477",status:"For Sale",type:"Single Family",price:629000,sqft:2650,land:18500,beds:4,baths:3,icon:"🏡",lat:41.2784,lng:-73.0285,grad:"135deg,#9FE1CB,#3DBFA0",reviews:[{t:"Best agent in the area, no question.",a:"K. Thompson",s:5},{t:"Handled everything flawlessly.",a:"M. & J. Chen",s:5}]},
+  {id:6,addr:"14 Harbor View Dr",town:"Milford",zip:"06460",status:"Sold",type:"Single Family",price:712000,sqft:3100,land:12000,beds:5,baths:3,icon:"🏠",lat:41.2223,lng:-73.0573,grad:"135deg,#CEC8F6,#8F88E0",reviews:[{t:"Got $40k over asking. Jennifer is a rockstar.",a:"The Williams Family",s:5}]},
+  {id:7,addr:"200 Whalley Ave",town:"New Haven",zip:"06515",status:"For Sale",type:"Multi-Family",price:595000,sqft:3400,land:5800,beds:6,baths:4,icon:"🏘️",lat:41.3421,lng:-72.9648,grad:"135deg,#9FE1CB,#3DBFA0",reviews:[{t:"Excellent investment find. Very knowledgeable.",a:"P. Rosario",s:4}]},
+  {id:8,addr:"55 Boston Post Rd",town:"Milford",zip:"06460",status:"For Rent",type:"Commercial",price:3200,sqft:1900,land:0,beds:0,baths:2,icon:"🏪",lat:41.2311,lng:-73.0621,grad:"135deg,#B5D4F4,#6AAEE8",reviews:[{t:"Had our space leased in 3 weeks.",a:"Sunrise Wellness LLC",s:5}]},
+  {id:9,addr:"9 Merwin Ave",town:"Milford",zip:"06461",status:"Under Contract",type:"Condo",price:298000,sqft:990,land:0,beds:2,baths:1,icon:"🏢",lat:41.2389,lng:-73.0548,grad:"135deg,#FAC775,#EF9F27",reviews:[{t:"Smooth negotiation from start to finish.",a:"First-time Buyer",s:5}]},
+  {id:10,addr:"310 Foxon Rd",town:"Branford",zip:"06405",status:"For Sale",type:"Single Family",price:449000,sqft:1740,land:9200,beds:3,baths:2,icon:"🏠",lat:41.2788,lng:-72.8148,grad:"135deg,#9FE1CB,#3DBFA0",reviews:[{t:"Jennifer found buyers we never would have reached.",a:"The Sorensen Family",s:5}]},
+  {id:11,addr:"7 Main St Unit 2B",town:"New Haven",zip:"06511",status:"Sold",type:"Apartment",price:275000,sqft:860,land:0,beds:2,baths:1,icon:"🏙️",lat:41.3026,lng:-72.9249,grad:"135deg,#CEC8F6,#8F88E0",reviews:[{t:"Record sale price for the building.",a:"Investor Client",s:5}]},
+  {id:12,addr:"44 River St",town:"West Haven",zip:"06516",status:"Under Contract",type:"Single Family",price:392000,sqft:1560,land:5400,beds:3,baths:2,icon:"🏠",lat:41.2742,lng:-72.9622,grad:"135deg,#FAC775,#EF9F27",reviews:[{t:"Jennifer kept us calm through a bidding war.",a:"The Dubois Family",s:5}]},
+];
 
-  const statusColors = { "For Sale":"#1D9E75", "Sold":"#534AB7", "Under Contract":"#BA7517", "For Rent":"#185FA5" };
-  const badgeClass   = { "For Sale":"badge-sale","Sold":"badge-sold","Under Contract":"badge-contract","For Rent":"badge-rent" };
-  const heroGradient = { "For Sale":"135deg, #9FE1CB 0%, #3DBFA0 100%", "Sold":"135deg, #CEC8F6 0%, #8F88E0 100%", "Under Contract":"135deg, #FAC775 0%, #EF9F27 100%", "For Rent":"135deg, #B5D4F4 0%, #6AAEE8 100%" };
+const SC={"For Sale":"#1D9E75","Sold":"#534AB7","Under Contract":"#BA7517","For Rent":"#185FA5"};
+const BC={"For Sale":"b-sale","Sold":"b-sold","Under Contract":"b-contract","For Rent":"b-rent"};
 
-  let activeStatuses = new Set(["For Sale","Sold","Under Contract","For Rent"]);
-  let zipFilter = "", townFilter = "", selectedId = null;
-  let scale = 1, tx = 0, ty = 0;
+let active=new Set(["For Sale","Sold","Under Contract","For Rent"]);
+let zipF="",townF="",selId=null;
 
-  function fmt(l) {
-    return l.status === "For Rent" ? "$" + l.price.toLocaleString() + "/mo" : "$" + l.price.toLocaleString();
-  }
+// ── MAP ──
+const map=L.map('map',{zoomControl:true}).setView([41.29,-72.97],11);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  maxZoom:19
+}).addTo(map);
 
-  function filtered() {
-    return listings.filter(l => {
-      if (!activeStatuses.has(l.status)) return false;
-      if (zipFilter && l.zip !== zipFilter) return false;
-      if (townFilter && !l.town.toLowerCase().includes(townFilter.toLowerCase())) return false;
-      return true;
-    });
-  }
+function pinSVG(color){
+  return`<svg viewBox="0 0 28 36" xmlns="http://www.w3.org/2000/svg"><path d="M14 0C7.37 0 2 5.37 2 12C2 20.25 14 36 14 36S26 20.25 26 12C26 5.37 20.63 0 14 0Z" fill="${color}" stroke="white" stroke-width="1.5"/><circle cx="14" cy="12" r="5" fill="rgba(255,255,255,.9)"/></svg>`;
+}
 
-  function renderStats(list) {
-    document.getElementById("stat-total").textContent    = list.length;
-    document.getElementById("stat-sale").textContent     = list.filter(l => l.status === "For Sale").length;
-    document.getElementById("stat-sold").textContent     = list.filter(l => l.status === "Sold").length;
-    document.getElementById("stat-contract").textContent = list.filter(l => l.status === "Under Contract").length;
-  }
-
-  function renderActiveFilters() {
-    const el = document.getElementById("active-filters");
-    el.innerHTML = "";
-    if (zipFilter) {
-      const tag = document.createElement("div");
-      tag.className = "filter-tag";
-      tag.innerHTML = `ZIP: ${zipFilter} <div class="filter-tag-x">✕</div>`;
-      tag.addEventListener("click", () => { zipFilter = ""; document.getElementById("zip-input").value = ""; renderAll(); });
-      el.appendChild(tag);
+const mkrs={};
+function refreshMarkers(){
+  const vis=new Set(filtered().map(l=>l.id));
+  DATA.forEach(l=>{
+    if(mkrs[l.id]){map.removeLayer(mkrs[l.id]);delete mkrs[l.id];}
+    if(vis.has(l.id)){
+      const icon=L.divIcon({html:`<div class="sp-pin${l.id===selId?' active':''}">${pinSVG(SC[l.status])}</div>`,className:'',iconSize:[28,36],iconAnchor:[14,36]});
+      const m=L.marker([l.lat,l.lng],{icon}).addTo(map);
+      m.on('click',()=>selectL(l.id));
+      mkrs[l.id]=m;
     }
-    if (townFilter) {
-      const tag = document.createElement("div");
-      tag.className = "filter-tag";
-      tag.innerHTML = `${townFilter} <div class="filter-tag-x">✕</div>`;
-      tag.addEventListener("click", () => { townFilter = ""; document.getElementById("town-input").value = ""; renderAll(); });
-      el.appendChild(tag);
-    }
+  });
+}
+
+// ── DATA HELPERS ──
+function fmt(l){return l.status==="For Rent"?"$"+l.price.toLocaleString()+"/mo":"$"+l.price.toLocaleString();}
+function filtered(){return DATA.filter(l=>{if(!active.has(l.status))return false;if(zipF&&l.zip!==zipF)return false;if(townF&&!l.town.toLowerCase().includes(townF.toLowerCase()))return false;return true;});}
+function getFields(l){const f=[["Type",l.type],["Interior",l.sqft.toLocaleString()+" sqft"]];if(l.land>0)f.push(["Land",l.land.toLocaleString()+" sqft"]);if(l.beds>0)f.push(["Beds / Baths",`${l.beds}bd · ${l.baths}ba`]);f.push(["Town",l.town],["Zip",l.zip]);return f;}
+function stars(n){return"★".repeat(n)+"☆".repeat(5-n);}
+function avgS(l){return Math.round(l.reviews.reduce((a,r)=>a+r.s,0)/l.reviews.length);}
+
+function renderStats(list){
+  document.getElementById("st-tot").textContent=list.length;
+  document.getElementById("st-sale").textContent=list.filter(l=>l.status==="For Sale").length;
+  document.getElementById("st-sold").textContent=list.filter(l=>l.status==="Sold").length;
+  document.getElementById("st-con").textContent=list.filter(l=>l.status==="Under Contract").length;
+  const n=list.length;
+  document.getElementById("bcnt").textContent=n+" propert"+(n===1?"y":"ies");
+  document.getElementById("bs-sale").textContent=list.filter(l=>l.status==="For Sale").length+" For Sale";
+  document.getElementById("bs-sold").textContent=list.filter(l=>l.status==="Sold").length+" Sold";
+  document.getElementById("bs-con").textContent=list.filter(l=>l.status==="Under Contract").length+" Contract";
+}
+
+function renderAF(){
+  const el=document.getElementById("aftags");el.innerHTML="";
+  if(zipF){const t=document.createElement("div");t.className="ftag";t.innerHTML=`ZIP: ${zipF} <div class="ftag-x">✕</div>`;t.onclick=()=>{zipF="";document.getElementById("zip-in").value="";renderAll();};el.appendChild(t);}
+  if(townF){const t=document.createElement("div");t.className="ftag";t.innerHTML=`${townF} <div class="ftag-x">✕</div>`;t.onclick=()=>{townF="";document.getElementById("town-in").value="";renderAll();};el.appendChild(t);}
+}
+
+function cardInner(l){
+  const land=l.land>0?`<div class="cmi">${l.land.toLocaleString()} sqft land</div>`:"";
+  const bed=l.beds>0?`<div class="cmi">${l.beds}bd · ${l.baths}ba</div>`:"";
+  return`<div class="ctop"><div><div class="cadr">${l.addr}</div><div class="ctwn">${l.town}, CT ${l.zip}</div></div><span class="badge ${BC[l.status]}">${l.status}</span></div><div class="cprc">${fmt(l)}</div><div class="cmeta"><div class="cmi">${l.type}</div><div class="cmi">${l.sqft.toLocaleString()} sqft</div>${bed}${land}</div>`;
+}
+
+function renderLists(list){
+  ["llist","blisting"].forEach(id=>{
+    const el=document.getElementById(id);el.innerHTML="";
+    if(!list.length){el.innerHTML=`<div class="nores"><div class="nores-i">🔍</div>No properties match.</div>`;return;}
+    list.forEach(l=>{const c=document.createElement("div");c.className="lcard"+(l.id===selId?" sel":"");c.innerHTML=cardInner(l);c.onclick=()=>selectL(l.id);el.appendChild(c);});
+  });
+}
+
+// ── DETAIL ──
+function showDesktopDetail(l){
+  const p=document.getElementById("dpanel");
+  document.getElementById("d-icon").textContent=l.icon;
+  document.getElementById("dhero").style.background=`linear-gradient(${l.grad})`;
+  document.getElementById("d-adr").textContent=l.addr;
+  document.getElementById("d-loc").textContent=`${l.town}, CT ${l.zip}`;
+  document.getElementById("d-prc").textContent=fmt(l);
+  const b=document.getElementById("d-badge");b.textContent=l.status;b.className=`dstatus badge ${BC[l.status]}`;
+  document.getElementById("d-grid").innerHTML=getFields(l).map(([k,v])=>`<div class="dfield"><div class="dflbl">${k}</div><div class="dfval">${v}</div></div>`).join("");
+  document.getElementById("d-stars").textContent=stars(avgS(l));
+  document.getElementById("d-revs").innerHTML=l.reviews.map(r=>`<div class="ri"><div class="ri-s">${stars(r.s)}</div><div class="ri-t">"${r.t}"</div><div class="ri-a">— ${r.a}</div></div>`).join("");
+  p.classList.add("open");
+}
+
+function showMobileDetail(l){
+  document.getElementById("md-icon").textContent=l.icon;
+  document.getElementById("md-hero").style.background=`linear-gradient(${l.grad})`;
+  document.getElementById("md-adr").textContent=l.addr;
+  document.getElementById("md-loc").textContent=`${l.town}, CT ${l.zip}`;
+  document.getElementById("md-prc").textContent=fmt(l);
+  const b=document.getElementById("md-badge");b.textContent=l.status;b.className=`badge ${BC[l.status]}`;
+  document.getElementById("md-grid").innerHTML=getFields(l).map(([k,v])=>`<div class="md-field"><div class="md-flbl">${k}</div><div class="md-fval">${v}</div></div>`).join("");
+  document.getElementById("md-stars").textContent=stars(avgS(l));
+  document.getElementById("md-revs").innerHTML=l.reviews.map(r=>`<div class="md-ri"><div class="md-ri-s">${stars(r.s)}</div><div class="md-ri-t">"${r.t}"</div><div class="md-ri-a">— ${r.a}</div></div>`).join("");
+  document.getElementById("mdetail").classList.add("open");
+}
+
+function selectL(id){
+  selId=id;
+  const l=DATA.find(x=>x.id===id);
+  renderAll();
+  if(!l)return;
+  map.setView([l.lat,l.lng],14,{animate:true});
+  if(window.innerWidth<=768){
+    setSheet("peek");
+    showMobileDetail(l);
+  } else {
+    showDesktopDetail(l);
   }
+}
 
-  function renderList(list) {
-    const el = document.getElementById("listing-list");
-    el.innerHTML = "";
-    if (list.length === 0) {
-      el.innerHTML = `<div class="no-results"><div class="no-results-icon">🔍</div>No properties match your filters.</div>`;
-      return;
-    }
-    list.forEach(l => {
-      const card = document.createElement("div");
-      card.className = "listing-card" + (l.id === selectedId ? " selected" : "");
-      const landInfo = l.landSqft > 0 ? `<div class="card-meta-item">${l.landSqft.toLocaleString()} sqft land</div>` : "";
-      const bedInfo  = l.beds > 0 ? `<div class="card-meta-item">${l.beds}bd · ${l.baths}ba</div>` : "";
-      card.innerHTML = `
-        <div class="card-top">
-          <div>
-            <div class="card-address">${l.address}</div>
-            <div class="card-town">${l.town}, CT ${l.zip}</div>
-          </div>
-          <span class="status-badge ${badgeClass[l.status]}">${l.status}</span>
-        </div>
-        <div class="card-price">${fmt(l)}</div>
-        <div class="card-meta">
-          <div class="card-meta-item">${l.type}</div>
-          <div class="card-meta-item">${l.sqft.toLocaleString()} sqft</div>
-          ${bedInfo}${landInfo}
-        </div>`;
-      card.addEventListener("click", () => selectListing(l.id));
-      el.appendChild(card);
-    });
+// ── BOTTOM SHEET ──
+const sheet=document.getElementById("bsheet");
+let shState="peek";
+function setSheet(s){
+  shState=s;
+  sheet.classList.remove("mid","full");
+  if(s==="mid")sheet.classList.add("mid");
+  if(s==="full")sheet.classList.add("full");
+}
+
+let touchStartY=null;
+const hw=document.getElementById("bhandle-wrap");
+hw.addEventListener("touchstart",e=>{touchStartY=e.touches[0].clientY;},{passive:true});
+hw.addEventListener("touchend",e=>{
+  if(touchStartY===null)return;
+  const dy=touchStartY-e.changedTouches[0].clientY;
+  if(Math.abs(dy)<12){
+    if(shState==="peek")setSheet("mid");
+    else if(shState==="mid")setSheet("full");
+    else setSheet("peek");
+  } else if(dy>40){
+    setSheet(shState==="peek"?"mid":"full");
+  } else if(dy<-40){
+    setSheet(shState==="full"?"mid":"peek");
   }
+  touchStartY=null;
+},{passive:true});
 
-  function renderPins(list) {
-    const layer = document.getElementById("pins-layer");
-    layer.innerHTML = "";
-    list.forEach(l => {
-      const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-      g.setAttribute("class", "map-pin" + (l.id === selectedId ? " selected-pin" : ""));
-      const color = statusColors[l.status];
-      const r = l.id === selectedId ? 13 : 10;
+// Also allow clicking handle on desktop sim
+hw.addEventListener("click",()=>{
+  if(shState==="peek")setSheet("mid");
+  else if(shState==="mid")setSheet("full");
+  else setSheet("peek");
+});
 
-      const shadow = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
-      shadow.setAttribute("cx", l.x); shadow.setAttribute("cy", l.y + r + 5);
-      shadow.setAttribute("rx", r * 0.7); shadow.setAttribute("ry", 3);
-      shadow.setAttribute("fill", "rgba(0,0,0,0.18)");
-
-      const pin = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      const px = l.x, py = l.y;
-      pin.setAttribute("d", `M${px},${py - r * 2.2} C${px - r * 1.5},${py - r * 2.2} ${px - r * 1.5},${py - r * 0.5} ${px},${py + r * 0.3} C${px + r * 1.5},${py - r * 0.5} ${px + r * 1.5},${py - r * 2.2} ${px},${py - r * 2.2} Z`);
-      pin.setAttribute("fill", color);
-
-      const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-      dot.setAttribute("cx", px); dot.setAttribute("cy", py - r * 1.3);
-      dot.setAttribute("r", r * 0.45); dot.setAttribute("fill", "rgba(255,255,255,0.9)");
-
-      g.appendChild(shadow); g.appendChild(pin); g.appendChild(dot);
-      g.addEventListener("click", () => selectListing(l.id));
-      layer.appendChild(g);
-    });
-  }
-
-  function showDetail(l) {
-    const panel = document.getElementById("detail-panel");
-    document.getElementById("detail-icon").textContent = l.icon;
-    document.getElementById("detail-hero").style.background = `linear-gradient(${heroGradient[l.status]})`;
-    document.getElementById("detail-address").textContent = l.address;
-    document.getElementById("detail-location").textContent = `${l.town}, CT ${l.zip}`;
-    document.getElementById("detail-price").textContent = fmt(l);
-    const badge = document.getElementById("detail-badge");
-    badge.textContent = l.status; badge.className = `detail-status-badge status-badge ${badgeClass[l.status]}`;
-
-    const fields = [
-      ["Type", l.type],
-      ["Interior", l.sqft.toLocaleString() + " sqft"],
-      ...(l.landSqft > 0 ? [["Land", l.landSqft.toLocaleString() + " sqft"]] : []),
-      ...(l.beds > 0 ? [["Beds / Baths", `${l.beds} bd · ${l.baths} ba`]] : []),
-      ["Town", l.town],
-      ["Zip Code", l.zip],
-    ];
-    document.getElementById("detail-grid").innerHTML = fields.map(([k, v]) =>
-      `<div class="detail-field"><div class="detail-field-lbl">${k}</div><div class="detail-field-val">${v}</div></div>`
-    ).join("");
-
-    const avg = Math.round(l.reviews.reduce((a, r) => a + r.stars, 0) / l.reviews.length);
-    document.getElementById("detail-stars").textContent = "★".repeat(avg) + "☆".repeat(5 - avg);
-    document.getElementById("detail-reviews").innerHTML = l.reviews.map(r =>
-      `<div class="review-item">
-        <div class="review-stars">${"★".repeat(r.stars)}${"☆".repeat(5 - r.stars)}</div>
-        <div class="review-text">"${r.text}"</div>
-        <div class="review-author">— ${r.author}</div>
-      </div>`
-    ).join("");
-
-    panel.classList.add("open");
-  }
-
-  function selectListing(id) {
-    selectedId = id;
-    renderAll();
-    const l = listings.find(x => x.id === id);
-    if (l) showDetail(l);
-  }
-
-  function renderAll() {
-    const list = filtered();
-    renderStats(list);
-    renderActiveFilters();
-    renderList(list);
-    renderPins(list);
-  }
-
-  // Status pills
-  document.querySelectorAll(".status-pill").forEach(pill => {
-    pill.addEventListener("click", () => {
-      const s = pill.dataset.status;
-      if (activeStatuses.has(s)) activeStatuses.delete(s);
-      else activeStatuses.add(s);
-      pill.classList.toggle("on", activeStatuses.has(s));
+// ── PILLS ──
+function bindPills(id){
+  document.getElementById(id).querySelectorAll(".pill").forEach(p=>{
+    p.addEventListener("click",()=>{
+      const s=p.dataset.s;
+      if(active.has(s))active.delete(s);else active.add(s);
+      document.querySelectorAll(`.pill[data-s="${s}"]`).forEach(x=>x.classList.toggle("on",active.has(s)));
       renderAll();
     });
   });
+}
+bindPills("d-pills");
+bindPills("m-pills");
 
-  // Search inputs
-  let zipTimer, townTimer;
-  document.getElementById("zip-input").addEventListener("input", e => {
-    clearTimeout(zipTimer);
-    zipTimer = setTimeout(() => { zipFilter = e.target.value.trim(); renderAll(); }, 300);
-  });
-  document.getElementById("town-input").addEventListener("input", e => {
-    clearTimeout(townTimer);
-    townTimer = setTimeout(() => { townFilter = e.target.value.trim(); renderAll(); }, 300);
-  });
+// ── INPUTS ──
+let zt,tt;
+document.getElementById("zip-in").addEventListener("input",e=>{clearTimeout(zt);zt=setTimeout(()=>{zipF=e.target.value.trim();renderAll();},300);});
+document.getElementById("town-in").addEventListener("input",e=>{clearTimeout(tt);tt=setTimeout(()=>{townF=e.target.value.trim();renderAll();},300);});
+document.getElementById("m-search").addEventListener("input",e=>{
+  clearTimeout(zt);const v=e.target.value.trim();
+  zt=setTimeout(()=>{if(/^\d{5}$/.test(v)){zipF=v;townF="";}else{townF=v;zipF="";}renderAll();},300);
+});
 
-  // Close detail panel
-  document.getElementById("detail-close").addEventListener("click", () => {
-    document.getElementById("detail-panel").classList.remove("open");
-    selectedId = null;
-    renderAll();
-  });
+// ── CLOSE / BACK ──
+document.getElementById("dclose").addEventListener("click",()=>{document.getElementById("dpanel").classList.remove("open");selId=null;renderAll();});
+document.getElementById("md-back").addEventListener("click",()=>document.getElementById("mdetail").classList.remove("open"));
 
-  // Zoom controls
-  let vbX = 0, vbY = 0, vbW = 900, vbH = 650;
-  document.getElementById("zoom-in").addEventListener("click", () => {
-    const cx = vbX + vbW / 2, cy = vbY + vbH / 2;
-    vbW = Math.max(300, vbW * 0.8); vbH = Math.max(220, vbH * 0.8);
-    vbX = cx - vbW / 2; vbY = cy - vbH / 2;
-    document.getElementById("map-svg").setAttribute("viewBox", `${vbX} ${vbY} ${vbW} ${vbH}`);
-  });
-  document.getElementById("zoom-out").addEventListener("click", () => {
-    const cx = vbX + vbW / 2, cy = vbY + vbH / 2;
-    vbW = Math.min(900, vbW * 1.25); vbH = Math.min(650, vbH * 1.25);
-    vbX = Math.max(0, cx - vbW / 2); vbY = Math.max(0, cy - vbH / 2);
-    document.getElementById("map-svg").setAttribute("viewBox", `${vbX} ${vbY} ${vbW} ${vbH}`);
-  });
+// ── MODAL ──
+document.getElementById("req-btn").addEventListener("click",()=>document.getElementById("mback").classList.add("open"));
+document.getElementById("mcan").addEventListener("click",()=>document.getElementById("mback").classList.remove("open"));
+document.getElementById("mback").addEventListener("click",e=>{if(e.target===document.getElementById("mback"))document.getElementById("mback").classList.remove("open");});
+document.getElementById("msub").addEventListener("click",()=>{
+  const nm=document.getElementById("m-nm").value.trim(),em=document.getElementById("m-em").value.trim();
+  if(!nm||!em){alert("Please enter your name and email.");return;}
+  document.getElementById("mbody").innerHTML=`<div class="msuc"><div class="msuc-i">🎉</div><div class="msuc-t">You're on the list!</div><div class="msuc-s">Thanks, ${nm}! We'll be in touch at ${em} with early access details.</div></div><div class="mbr" style="margin-top:18px"><button class="msbtn" onclick="document.getElementById('mback').classList.remove('open')">Close</button></div>`;
+});
 
-  // Modal
-  document.getElementById("request-access-btn").addEventListener("click", () => {
-    document.getElementById("modal-backdrop").classList.add("open");
-  });
-  document.getElementById("modal-cancel").addEventListener("click", () => {
-    document.getElementById("modal-backdrop").classList.remove("open");
-  });
-  document.getElementById("modal-backdrop").addEventListener("click", e => {
-    if (e.target === document.getElementById("modal-backdrop"))
-      document.getElementById("modal-backdrop").classList.remove("open");
-  });
-  document.getElementById("modal-submit").addEventListener("click", () => {
-    const name = document.getElementById("m-name").value.trim();
-    const email = document.getElementById("m-email").value.trim();
-    if (!name || !email) { alert("Please enter your name and email."); return; }
-    document.getElementById("modal-body").innerHTML = `
-      <div class="modal-success">
-        <div class="modal-success-icon">🎉</div>
-        <div class="modal-success-title">You're on the list!</div>
-        <div class="modal-success-text">Thanks, ${name}! We'll be in touch at ${email} with early access details for SocialProof.</div>
-      </div>
-      <div class="modal-btn-row" style="margin-top:20px;">
-        <button class="modal-submit" onclick="document.getElementById('modal-backdrop').classList.remove('open')">Close</button>
-      </div>`;
-  });
-
-  // Init
-  renderAll();
+// ── RENDER ──
+function renderAll(){
+  const list=filtered();
+  renderStats(list);renderAF();renderLists(list);refreshMarkers();
+}
+renderAll();
+setTimeout(()=>map.invalidateSize(),100);
+setTimeout(()=>map.invalidateSize(),500);
+setTimeout(()=>map.invalidateSize(),1200);
 </script>
 </body>
 </html>
