@@ -1,0 +1,1560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>SocialProof — Real Estate Portfolio Maps</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{
+      --green:#1D9E75;--green-dark:#0F6E56;--green-light:#E1F5EE;
+      --purple:#534AB7;--purple-light:#EEEDFE;
+      --amber:#BA7517;--amber-light:#FAEEDA;
+      --blue:#185FA5;--blue-light:#E6F1FB;
+      --g50:#F7F7F5;--g100:#EFEFEB;--g200:#DDDDD8;
+      --g400:#9A9A94;--g600:#5F5E5A;--g900:#1C1C1A;
+      --white:#fff;--bar:54px;
+      --r-md:10px;--r-lg:14px;--r-xl:20px;
+    }
+    html,body{height:100%;overflow:hidden;}
+    body{font-family:'DM Sans',sans-serif;color:var(--g900);font-size:14px;background:var(--g50);}
+
+    /* TOPBAR */
+    .bar{position:fixed;top:0;left:0;right:0;z-index:600;height:var(--bar);background:var(--white);border-bottom:1px solid var(--g200);display:flex;align-items:center;justify-content:space-between;padding:0 16px;box-shadow:0 1px 3px rgba(0,0,0,.08);}
+    .logo{display:flex;align-items:center;gap:8px;text-decoration:none;}
+    .logo-mark{width:28px;height:28px;border-radius:8px;background:var(--green);display:flex;align-items:center;justify-content:center;}
+    .logo-mark svg{width:15px;height:15px;}
+    .logo-name{font-family:'DM Serif Display',serif;font-size:16px;color:var(--g900);}
+    .logo-name span{color:var(--green);}
+    .bar-center{display:flex;align-items:center;}
+    .bar-right{display:flex;align-items:center;gap:8px;}
+    .chip{display:flex;align-items:center;gap:5px;background:var(--amber-light);color:var(--amber);border:1px solid #EFC97A;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:500;}
+    .chip::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--amber);}
+    .av-pill{display:flex;align-items:center;gap:7px;background:var(--g50);border:1px solid var(--g200);border-radius:20px;padding:4px 11px 4px 5px;}
+    .av{width:24px;height:24px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;color:#fff;}
+    .av-name{font-size:12px;font-weight:500;}
+    .cta-btn{background:var(--green);color:#fff;border:none;border-radius:var(--r-md);padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;}
+    .cta-btn:hover{background:var(--green-dark);}
+
+    /* VIEW TOGGLE (desktop topbar) */
+    .view-toggle{display:flex;align-items:center;background:var(--g100);border-radius:9px;padding:3px;gap:2px;}
+    .vt-btn{display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:6px;border:none;font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--g400);background:transparent;transition:all .15s;white-space:nowrap;}
+    .vt-btn.active{background:var(--white);color:var(--g900);box-shadow:0 1px 3px rgba(0,0,0,.1);}
+    .vt-btn svg{flex-shrink:0;}
+
+    /* DESKTOP: sidebar + map side by side */
+    .shell{display:flex;height:100vh;padding-top:var(--bar);}
+    .sidebar{width:310px;flex-shrink:0;background:var(--white);border-right:1px solid var(--g200);display:flex;flex-direction:column;overflow:hidden;}
+    .mapwrap{flex:1;position:relative;display:flex;flex-direction:column;}
+    #map{width:100%;flex:1;min-height:400px;}
+    .m-bar{display:none;}
+    .bsheet{display:none;}
+    .mdetail{display:none;}
+
+    /* Sidebar internals */
+    .filters{padding:12px 14px;border-bottom:1px solid var(--g100);}
+    .flbl{font-size:10px;font-weight:600;color:var(--g400);text-transform:uppercase;letter-spacing:.7px;margin-bottom:7px;}
+    .srow{display:flex;gap:7px;margin-bottom:10px;}
+    .swrap{flex:1;position:relative;}
+    .sico{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--g400);pointer-events:none;}
+    .sinput{width:100%;height:33px;border-radius:var(--r-md);border:1px solid var(--g200);background:var(--g50);padding:0 10px 0 28px;font-size:13px;color:var(--g900);font-family:'DM Sans',sans-serif;}
+    .sinput:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(29,158,117,.12);background:var(--white);}
+    .sinput::placeholder{color:var(--g400);}
+    .aftags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;}
+    .ftag{display:inline-flex;align-items:center;gap:5px;background:var(--green-light);color:var(--green-dark);border-radius:12px;padding:3px 8px 3px 10px;font-size:11px;font-weight:500;cursor:pointer;}
+    .ftag-x{width:14px;height:14px;border-radius:50%;background:rgba(29,158,117,.2);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;}
+    .pills{display:flex;gap:5px;flex-wrap:wrap;}
+    .pill{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:500;border:1px solid var(--g200);cursor:pointer;color:var(--g600);background:var(--white);user-select:none;transition:all .15s;}
+    .pill.on[data-s="For Sale"]{background:var(--green);color:#fff;border-color:var(--green);}
+    .pill.on[data-s="Sold"]{background:var(--purple);color:#fff;border-color:var(--purple);}
+    .pill.on[data-s="Under Contract"]{background:var(--amber);color:#fff;border-color:var(--amber);}
+    .pill.on[data-s="For Rent"]{background:var(--blue);color:#fff;border-color:var(--blue);}
+    .pill.on[data-type]{background:var(--g900);color:#fff;border-color:var(--g900);}
+    .pill.on[data-beds]{background:var(--g900);color:#fff;border-color:var(--g900);}
+
+    /* MORE FILTERS section */
+    .filter-more{border-top:1px solid var(--g100);padding:10px 14px 6px;}
+    .filter-toggle{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:2px 0 8px;user-select:none;}
+    .filter-toggle-lbl{font-size:11px;font-weight:600;color:var(--g600);display:flex;align-items:center;gap:6px;}
+    .filter-active-dot{width:6px;height:6px;border-radius:50%;background:var(--green);display:none;}
+    .filter-active-dot.show{display:inline-block;}
+    .filter-toggle-ico{font-size:10px;color:var(--g400);transition:transform .2s;}
+    .filter-toggle-ico.open{transform:rotate(180deg);}
+    .filter-body{display:none;}
+    .filter-body.open{display:block;}
+    .price-row{display:flex;gap:7px;align-items:center;margin-bottom:10px;}
+    .price-input{flex:1;height:33px;border-radius:var(--r-md);border:1px solid var(--g200);background:var(--g50);padding:0 10px;font-size:12px;color:var(--g900);font-family:'DM Sans',sans-serif;}
+    .price-input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(29,158,117,.12);background:var(--white);}
+    .price-input::placeholder{color:var(--g400);}
+    .price-sep{font-size:11px;color:var(--g400);flex-shrink:0;}
+    .type-pills{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
+    .beds-pills{display:flex;gap:5px;margin-bottom:6px;}
+
+    /* STATS BAR */
+    .stats-bar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;padding:10px 14px;border-bottom:1px solid var(--g100);}
+    .scard{background:var(--g50);border-radius:var(--r-md);padding:7px 8px;text-align:center;}
+    .snum{font-size:17px;font-weight:600;}
+    .slbl{font-size:9px;color:var(--g400);margin-top:1px;font-weight:500;text-transform:uppercase;letter-spacing:.4px;}
+    .llist{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:6px;}
+    .llist::-webkit-scrollbar{width:3px;}
+    .llist::-webkit-scrollbar-thumb{background:var(--g200);border-radius:4px;}
+    .lcard{background:var(--white);border:1px solid var(--g200);border-radius:var(--r-lg);padding:11px 12px;cursor:pointer;transition:border-color .15s,box-shadow .15s;}
+    .lcard:hover{border-color:var(--green);}
+    .lcard.sel{border-color:var(--green);border-width:1.5px;box-shadow:0 0 0 3px rgba(29,158,117,.1);}
+    .ctop{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px;}
+    .cadr{font-size:13px;font-weight:600;color:var(--g900);line-height:1.3;}
+    .ctwn{font-size:11px;color:var(--g400);margin-top:1px;}
+    .cprc{font-size:14px;font-weight:600;color:var(--g900);margin-bottom:6px;}
+    .cmeta{display:flex;gap:8px;flex-wrap:wrap;}
+    .cmi{font-size:11px;color:var(--g400);}
+    .badge{font-size:10px;font-weight:600;padding:3px 7px;border-radius:10px;white-space:nowrap;flex-shrink:0;}
+    .b-sale{background:var(--green-light);color:var(--green-dark);}
+    .b-sold{background:var(--purple-light);color:var(--purple);}
+    .b-contract{background:var(--amber-light);color:var(--amber);}
+    .b-rent{background:var(--blue-light);color:var(--blue);}
+    .nores{text-align:center;padding:28px 16px;color:var(--g400);font-size:13px;}
+    .nores-i{font-size:26px;margin-bottom:7px;}
+
+    /* Leaflet tweaks */
+    .leaflet-control-zoom{border:1px solid var(--g200)!important;border-radius:var(--r-md)!important;overflow:hidden;}
+    .leaflet-control-zoom-in,.leaflet-control-zoom-out{font-family:'DM Sans',sans-serif!important;color:var(--g600)!important;background:var(--white)!important;}
+    .leaflet-control-zoom-in:hover,.leaflet-control-zoom-out:hover{background:var(--g50)!important;}
+    .leaflet-control-attribution{font-size:10px!important;}
+    .sp-pin{width:28px;height:36px;cursor:pointer;transition:transform .15s;transform-origin:bottom center;}
+    .sp-pin:hover,.sp-pin.active{transform:scale(1.25) translateY(-3px);}
+
+    /* GRID VIEW (desktop — fills mapwrap) */
+    .grid-area{flex:1;overflow-y:auto;padding:18px;display:none;background:var(--g50);}
+    .grid-area.show{display:block;}
+    .grid-area::-webkit-scrollbar{width:4px;}
+    .grid-area::-webkit-scrollbar-thumb{background:var(--g200);border-radius:4px;}
+    .grid-wrap{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:14px;}
+    .gcard{background:var(--white);border:1px solid var(--g200);border-radius:var(--r-lg);overflow:hidden;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .15s;}
+    .gcard:hover{border-color:var(--green);box-shadow:0 6px 20px rgba(0,0,0,.09);transform:translateY(-2px);}
+    .gcard.sel{border-color:var(--green);border-width:1.5px;box-shadow:0 0 0 3px rgba(29,158,117,.1);}
+    .ghero{height:118px;display:flex;align-items:center;justify-content:center;font-size:46px;position:relative;}
+    .gbadge-pos{position:absolute;bottom:8px;left:10px;}
+    .gbody{padding:12px 13px 13px;}
+    .gadr{font-size:13px;font-weight:600;color:var(--g900);margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .gtwn{font-size:11px;color:var(--g400);margin-bottom:7px;}
+    .gprc{font-size:16px;font-weight:700;color:var(--g900);font-family:'DM Serif Display',serif;margin-bottom:7px;}
+    .gmeta{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;}
+    .gmi{font-size:11px;color:var(--g400);}
+    .grev-row{border-top:1px solid var(--g100);padding-top:9px;}
+    .grev-stars{color:#EF9F27;font-size:10px;letter-spacing:.5px;margin-bottom:3px;}
+    .grev-quote{font-size:11px;color:var(--g600);font-style:italic;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+
+    /* Desktop detail panel */
+    .dpanel{position:absolute;right:14px;top:14px;z-index:400;width:285px;background:var(--white);border:1px solid var(--g200);border-radius:var(--r-xl);box-shadow:0 12px 32px rgba(0,0,0,.14);overflow:hidden;opacity:0;pointer-events:none;transform:translateX(12px);transition:opacity .2s,transform .2s;max-height:calc(100vh - var(--bar) - 28px);overflow-y:auto;display:none;}
+    .dpanel.open{opacity:1;pointer-events:all;transform:none;display:block;}
+    .dpanel::-webkit-scrollbar{width:3px;}
+    .dpanel::-webkit-scrollbar-thumb{background:var(--g200);border-radius:4px;}
+    .dhero{width:100%;height:140px;position:relative;display:flex;align-items:center;justify-content:center;}
+    .dhero-icon{font-size:48px;filter:drop-shadow(0 3px 6px rgba(0,0,0,.15));}
+    .dclose{position:absolute;top:9px;right:9px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.22);border:none;color:#fff;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;}
+    .dstatus{position:absolute;bottom:9px;left:9px;}
+    .dbody{padding:13px 15px 4px;}
+    .dadr{font-size:14px;font-weight:600;line-height:1.3;margin-bottom:2px;}
+    .dloc{font-size:12px;color:var(--g400);margin-bottom:9px;}
+    .dprc{font-size:21px;font-weight:700;margin-bottom:12px;font-family:'DM Serif Display',serif;letter-spacing:-.4px;}
+    .dgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;}
+    .dfield{background:var(--g50);border-radius:var(--r-md);padding:8px 10px;}
+    .dflbl{font-size:9px;color:var(--g400);font-weight:600;margin-bottom:2px;text-transform:uppercase;letter-spacing:.4px;}
+    .dfval{font-size:12px;font-weight:600;}
+    .rsec{border-top:1px solid var(--g100);padding:12px 15px 15px;}
+    .rhdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;}
+    .rtitle{font-size:11px;font-weight:600;color:var(--g600);text-transform:uppercase;letter-spacing:.5px;}
+    .dstars{color:#EF9F27;font-size:12px;letter-spacing:1px;}
+    .ri{background:var(--g50);border-radius:var(--r-md);padding:9px 11px;margin-bottom:6px;}
+    .ri:last-child{margin-bottom:0;}
+    .ri-s{color:#EF9F27;font-size:10px;margin-bottom:3px;}
+    .ri-t{font-size:12px;color:var(--g900);line-height:1.5;font-style:italic;margin-bottom:4px;}
+    .ri-a{font-size:11px;color:var(--g400);font-weight:500;}
+
+    /* CONTACT FORM (desktop detail panel) */
+    .csec{border-top:1px solid var(--g100);padding:12px 15px 16px;}
+    .csec-title{font-size:11px;font-weight:600;color:var(--g600);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+    .cform-field{margin-bottom:7px;}
+    .cinput{width:100%;height:34px;border:1px solid var(--g200);border-radius:var(--r-md);padding:0 10px;font-size:12px;color:var(--g900);font-family:'DM Sans',sans-serif;background:var(--g50);}
+    .cinput:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(29,158,117,.12);background:var(--white);}
+    .cinput::placeholder{color:var(--g400);}
+    .ctarea{width:100%;height:68px;border:1px solid var(--g200);border-radius:var(--r-md);padding:8px 10px;font-size:12px;color:var(--g900);font-family:'DM Sans',sans-serif;background:var(--g50);resize:none;line-height:1.5;}
+    .ctarea:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(29,158,117,.12);background:var(--white);}
+    .ctarea::placeholder{color:var(--g400);}
+    .csend{width:100%;height:36px;background:var(--green);color:#fff;border:none;border-radius:var(--r-md);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .15s;margin-top:2px;}
+    .csend:hover{background:var(--green-dark);}
+    .csuc{text-align:center;padding:10px 0 4px;}
+    .csuc-i{font-size:24px;margin-bottom:5px;}
+    .csuc-t{font-size:13px;font-weight:600;color:var(--g900);margin-bottom:3px;}
+    .csuc-s{font-size:11px;color:var(--g400);line-height:1.5;}
+
+    /* Map legend */
+    .legend{position:absolute;left:12px;bottom:28px;z-index:400;background:var(--white);border:1px solid var(--g200);border-radius:var(--r-lg);padding:9px 13px;box-shadow:0 1px 3px rgba(0,0,0,.08);}
+    .ltitle{font-size:9px;font-weight:600;color:var(--g400);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;}
+    .li{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--g600);margin-bottom:4px;font-weight:500;}
+    .li:last-child{margin-bottom:0;}
+    .ld{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+
+    /* AGENT PROFILE MODAL */
+    .profile-back{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:900;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;padding:16px;}
+    .profile-back.open{opacity:1;pointer-events:all;}
+    .profile-modal{background:var(--white);border-radius:var(--r-xl);width:100%;max-width:440px;box-shadow:0 12px 40px rgba(0,0,0,.16);transform:translateY(16px) scale(.98);transition:transform .2s;overflow:hidden;}
+    .profile-back.open .profile-modal{transform:none;}
+    .profile-hero{height:90px;background:linear-gradient(135deg,#3DBFA0 0%,#1D9E75 100%);position:relative;}
+    .profile-close{position:absolute;top:10px;right:10px;width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,.2);border:none;color:#fff;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;}
+    .profile-hs-wrap{position:absolute;bottom:-32px;left:24px;}
+    .profile-hs{width:68px;height:68px;border-radius:50%;background:linear-gradient(135deg,#9FE1CB,#1D9E75);border:3px solid var(--white);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:600;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15);}
+    .profile-body{padding:44px 24px 24px;}
+    .profile-name{font-family:'DM Serif Display',serif;font-size:22px;color:var(--g900);margin-bottom:2px;}
+    .profile-role{font-size:13px;color:var(--g400);margin-bottom:14px;}
+    .profile-bio{font-size:13px;color:var(--g600);line-height:1.65;margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--g100);}
+    .profile-contacts{display:flex;flex-direction:column;gap:8px;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--g100);}
+    .pc{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--g600);}
+    .pc-icon{width:30px;height:30px;border-radius:8px;background:var(--g50);border:1px solid var(--g200);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .pc a{color:var(--green);text-decoration:none;}
+    .pc a:hover{text-decoration:underline;}
+    .profile-recent-lbl{font-size:10px;font-weight:600;color:var(--g400);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;}
+    .profile-sales{display:flex;flex-direction:column;gap:7px;}
+    .psale{display:flex;align-items:center;gap:10px;background:var(--g50);border-radius:var(--r-lg);padding:10px 12px;cursor:pointer;transition:background .15s;border:1px solid transparent;}
+    .psale:hover{background:var(--white);border-color:var(--green);}
+    .psale-icon{font-size:22px;flex-shrink:0;}
+    .psale-info{flex:1;min-width:0;}
+    .psale-addr{font-size:12px;font-weight:600;color:var(--g900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .psale-meta{font-size:11px;color:var(--g400);margin-top:2px;}
+    .psale-price{font-size:13px;font-weight:600;color:var(--purple);flex-shrink:0;}
+
+    /* SHARE BUTTON + MODAL */
+    .share-btn{display:flex;align-items:center;gap:5px;background:var(--white);color:var(--g600);border:1px solid var(--g200);border-radius:var(--r-md);padding:6px 11px;font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;transition:border-color .15s,color .15s;}
+    .share-btn:hover{border-color:var(--green);color:var(--green);}
+    .share-url-row{display:flex;gap:8px;margin:14px 0 8px;}
+    .share-url{flex:1;height:38px;border:1px solid var(--g200);border-radius:var(--r-md);padding:0 12px;font-size:12px;color:var(--g600);background:var(--g50);font-family:'DM Sans',sans-serif;cursor:text;}
+    .share-copy{height:38px;padding:0 14px;background:var(--green);color:#fff;border:none;border-radius:var(--r-md);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;transition:background .15s;}
+    .share-copy:hover{background:var(--green-dark);}
+    .share-copy.copied{background:var(--purple);}
+    .share-note{font-size:12px;color:var(--g400);line-height:1.6;}
+    .share-preview{background:var(--g50);border-radius:var(--r-lg);padding:14px;margin-top:14px;border:1px solid var(--g200);}
+    .share-preview-lbl{font-size:10px;font-weight:600;color:var(--g400);text-transform:uppercase;letter-spacing:.6px;margin-bottom:9px;}
+    .share-preview-row{display:flex;align-items:center;gap:10px;}
+    .share-preview-av{width:36px;height:36px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff;flex-shrink:0;}
+    .share-preview-name{font-size:13px;font-weight:600;color:var(--g900);}
+    .share-preview-sub{font-size:11px;color:var(--g400);margin-top:1px;}
+
+    /* PUBLIC VIEW banner */
+    .pub-banner{display:none;position:fixed;top:var(--bar);left:0;right:0;z-index:450;background:var(--green);color:#fff;text-align:center;padding:9px 16px;font-size:13px;font-weight:500;}
+    .pub-banner.show{display:block;}
+
+    /* ═══════════════════════════════════════════
+       MOBILE
+    ═══════════════════════════════════════════ */
+    @media(max-width:768px){
+      :root{--bar:50px;}
+      .sidebar{display:none!important;}
+      .dpanel{display:none!important;}
+      .legend{display:none!important;}
+      .av-name{display:none;}
+      .view-toggle{display:none!important;}
+      .m-bar{display:flex!important;}
+      .bsheet{display:flex!important;}
+      .mdetail{display:block!important;}
+
+      .shell{display:block;height:100vh;padding-top:var(--bar);}
+      .mapwrap{position:absolute;top:var(--bar);left:0;right:0;bottom:0;}
+      #map{width:100%;height:100%;min-height:unset;flex:unset;}
+      .grid-area{display:none!important;}
+
+      /* Floating search + pills + mobile view toggle */
+      .m-bar{
+        position:absolute;top:10px;left:10px;right:10px;z-index:500;
+        display:flex;flex-direction:column;gap:7px;
+      }
+      .m-search-row{display:flex;gap:7px;align-items:center;}
+      .m-search{
+        flex:1;height:40px;border-radius:20px;
+        border:1px solid var(--g200);background:var(--white);
+        padding:0 18px;font-size:14px;color:var(--g900);
+        font-family:'DM Sans',sans-serif;
+        box-shadow:0 2px 8px rgba(0,0,0,.10);
+      }
+      .m-search:focus{outline:none;border-color:var(--green);}
+      .m-search::placeholder{color:var(--g400);}
+
+      /* Mobile view toggle (map/list) */
+      .m-view-toggle{display:flex;background:var(--white);border:1px solid var(--g200);border-radius:20px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.10);flex-shrink:0;}
+      .mvt-btn{display:flex;align-items:center;justify-content:center;width:36px;height:40px;border:none;background:transparent;color:var(--g400);cursor:pointer;transition:all .15s;}
+      .mvt-btn.active{background:var(--green);color:#fff;}
+      .mvt-btn:first-child{border-right:1px solid var(--g200);}
+
+      .m-pills{
+        display:flex;gap:7px;
+        overflow-x:auto;-webkit-overflow-scrolling:touch;
+        padding:2px 0 4px;
+      }
+      .m-pills::-webkit-scrollbar{display:none;}
+      .m-pills .pill{
+        flex-shrink:0;white-space:nowrap;
+        background:var(--white);
+        box-shadow:0 2px 6px rgba(0,0,0,.10);
+        font-size:12px;padding:5px 12px;
+      }
+      /* Mobile filter button in pills row */
+      .m-filter-pill{
+        flex-shrink:0;
+        display:flex;align-items:center;gap:5px;
+        background:var(--white);border:1px solid var(--g200);
+        border-radius:20px;padding:5px 12px;
+        font-size:12px;font-weight:500;color:var(--g600);
+        cursor:pointer;white-space:nowrap;
+        box-shadow:0 2px 6px rgba(0,0,0,.10);
+      }
+      .m-filter-pill.active{background:var(--g900);color:#fff;border-color:var(--g900);}
+
+      /* Grid mode on mobile — blisting becomes 2-col grid */
+      .blisting.grid-mode{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:8px;
+        align-content:start;
+      }
+      .blisting.grid-mode .lcard{
+        padding:9px 10px;
+      }
+      .blisting.grid-mode .cmeta{display:none;}
+
+      /* Bottom sheet */
+      .bsheet{
+        position:fixed;left:0;right:0;bottom:0;z-index:500;
+        background:var(--white);
+        border-radius:18px 18px 0 0;
+        box-shadow:0 -4px 20px rgba(0,0,0,.12);
+        display:flex;flex-direction:column;
+        height:calc(100vh - var(--bar) - 12px);
+        transform:translateY(calc(100% - 90px));
+        transition:transform .35s cubic-bezier(.32,.72,0,1);
+        touch-action:pan-y;
+      }
+      .bsheet.mid{transform:translateY(calc(100% - 52vh));}
+      .bsheet.full{transform:translateY(0);}
+
+      .bhandle-wrap{padding:10px 0 4px;display:flex;justify-content:center;flex-shrink:0;cursor:pointer;}
+      .bhandle{width:38px;height:4px;border-radius:2px;background:var(--g200);}
+
+      .bhead{padding:4px 16px 12px;flex-shrink:0;border-bottom:1px solid var(--g100);}
+      .bcount{font-size:14px;font-weight:600;color:var(--g900);}
+      .bstats{display:flex;gap:12px;margin-top:6px;}
+      .bstat{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:500;}
+      .bstat-dot{width:7px;height:7px;border-radius:50%;}
+      .blisting{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:7px;}
+      .blisting::-webkit-scrollbar{display:none;}
+
+      /* Full-screen property detail */
+      .mdetail{
+        position:fixed;inset:0;z-index:700;
+        background:var(--white);
+        transform:translateY(100%);
+        transition:transform .3s cubic-bezier(.32,.72,0,1);
+        overflow-y:auto;
+        padding-top:var(--bar);
+      }
+      .mdetail.open{transform:translateY(0);}
+      .mdetail::-webkit-scrollbar{display:none;}
+      .md-hero{width:100%;height:220px;position:relative;display:flex;align-items:center;justify-content:center;}
+      .md-icon{font-size:70px;filter:drop-shadow(0 4px 10px rgba(0,0,0,.15));}
+      .md-back{
+        position:absolute;top:12px;left:12px;
+        width:36px;height:36px;border-radius:50%;
+        background:rgba(0,0,0,.25);border:none;color:#fff;
+        cursor:pointer;font-size:20px;line-height:1;
+        display:flex;align-items:center;justify-content:center;
+      }
+      .md-badge-pos{position:absolute;bottom:10px;left:14px;}
+      .md-body{padding:20px 16px 4px;}
+      .md-adr{font-size:19px;font-weight:700;line-height:1.3;margin-bottom:3px;}
+      .md-loc{font-size:13px;color:var(--g400);margin-bottom:10px;}
+      .md-prc{font-size:30px;font-weight:700;margin-bottom:18px;font-family:'DM Serif Display',serif;letter-spacing:-.5px;}
+      .md-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:20px;}
+      .md-field{background:var(--g50);border-radius:var(--r-md);padding:12px 13px;}
+      .md-flbl{font-size:10px;color:var(--g400);font-weight:600;margin-bottom:3px;text-transform:uppercase;letter-spacing:.4px;}
+      .md-fval{font-size:14px;font-weight:600;color:var(--g900);}
+      .md-rev{border-top:1px solid var(--g100);padding:18px 16px 10px;}
+      .md-rhdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+      .md-rtitle{font-size:12px;font-weight:700;color:var(--g600);text-transform:uppercase;letter-spacing:.5px;}
+      .md-ri{background:var(--g50);border-radius:var(--r-md);padding:13px 14px;margin-bottom:9px;}
+      .md-ri-s{color:#EF9F27;font-size:12px;margin-bottom:5px;}
+      .md-ri-t{font-size:13px;color:var(--g900);line-height:1.55;font-style:italic;margin-bottom:5px;}
+      .md-ri-a{font-size:12px;color:var(--g400);font-weight:500;}
+
+      /* Mobile contact form (inside mdetail) */
+      .md-contact{border-top:1px solid var(--g100);padding:18px 16px 32px;}
+      .md-contact-title{font-size:12px;font-weight:700;color:var(--g600);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;}
+      .md-cinput{width:100%;height:44px;border:1px solid var(--g200);border-radius:var(--r-md);padding:0 13px;font-size:14px;color:var(--g900);font-family:'DM Sans',sans-serif;background:var(--g50);margin-bottom:9px;}
+      .md-cinput:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(29,158,117,.12);background:var(--white);}
+      .md-cinput::placeholder{color:var(--g400);}
+      .md-ctarea{width:100%;height:90px;border:1px solid var(--g200);border-radius:var(--r-md);padding:11px 13px;font-size:14px;color:var(--g900);font-family:'DM Sans',sans-serif;background:var(--g50);resize:none;line-height:1.5;margin-bottom:9px;}
+      .md-ctarea:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(29,158,117,.12);background:var(--white);}
+      .md-ctarea::placeholder{color:var(--g400);}
+      .md-csend{width:100%;height:46px;background:var(--green);color:#fff;border:none;border-radius:var(--r-md);font-size:15px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;}
+      .md-csend:hover{background:var(--green-dark);}
+
+      /* Mobile filter bottom drawer */
+      .fm-back{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:800;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .2s;}
+      .fm-back.open{opacity:1;pointer-events:all;}
+      .fm-drawer{background:var(--white);border-radius:18px 18px 0 0;width:100%;padding:22px 18px 36px;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);max-height:85vh;overflow-y:auto;}
+      .fm-back.open .fm-drawer{transform:none;}
+      .fm-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+      .fm-title{font-size:16px;font-weight:600;color:var(--g900);}
+      .fm-close{background:none;border:none;font-size:20px;color:var(--g400);cursor:pointer;line-height:1;}
+      .fm-sec{margin-bottom:16px;}
+      .fm-lbl{font-size:10px;font-weight:600;color:var(--g400);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;}
+      .fm-price-row{display:flex;gap:8px;align-items:center;}
+      .fm-price-row input{flex:1;height:42px;border-radius:var(--r-md);border:1px solid var(--g200);background:var(--g50);padding:0 12px;font-size:14px;font-family:'DM Sans',sans-serif;color:var(--g900);}
+      .fm-price-row input:focus{outline:none;border-color:var(--green);}
+      .fm-price-row input::placeholder{color:var(--g400);}
+      .fm-price-sep{font-size:13px;color:var(--g400);}
+      .fm-pills{display:flex;gap:7px;flex-wrap:wrap;}
+      .fm-pills .pill{font-size:12px;padding:6px 13px;}
+      .fm-apply{width:100%;height:46px;background:var(--green);color:#fff;border:none;border-radius:var(--r-md);font-size:15px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:8px;}
+      .fm-apply:hover{background:var(--green-dark);}
+      .fm-clear{width:100%;height:40px;background:transparent;color:var(--g400);border:1px solid var(--g200);border-radius:var(--r-md);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:8px;}
+
+      /* chat-fab: rise above bsheet peek */
+      .chat-fab{bottom:108px!important;}
+      /* hide desktop chat panel on mobile */
+      .chat-panel{display:none!important;}
+      /* mobile chat fullscreen (same slide-up pattern as mdetail) */
+      .mchat{display:flex!important;flex-direction:column;}
+      .mchat{
+        position:fixed;inset:0;z-index:750;
+        background:var(--white);
+        transform:translateY(100%);
+        transition:transform .3s cubic-bezier(.32,.72,0,1);
+        padding-top:var(--bar);
+      }
+      .mchat.open{transform:translateY(0);}
+      .mchat-hdr{padding:12px 16px;border-bottom:1px solid var(--g100);display:flex;align-items:center;gap:12px;flex-shrink:0;}
+      .mchat-back{width:36px;height:36px;border-radius:50%;background:var(--g100);border:none;color:var(--g600);cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+      .mchat-agent{display:flex;align-items:center;gap:10px;}
+      .mchat-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;}
+      .mchat-msgs::-webkit-scrollbar{display:none;}
+      .mchat-msgs .chat-bubble{font-size:14px;padding:10px 14px;border-radius:16px;}
+      .mchat-msgs .chat-time-lbl{font-size:10px;}
+      .mchat-msgs .chat-av-sm{width:28px;height:28px;font-size:9px;}
+      .mchat-msgs .chat-empty-av{width:54px;height:54px;font-size:18px;}
+      .mchat-msgs .chat-empty-t{font-size:15px;}
+      .mchat-msgs .chat-empty-s{font-size:13px;}
+      .mchat-input-row{padding:12px 16px 28px;border-top:1px solid var(--g100);display:flex;gap:10px;align-items:center;flex-shrink:0;}
+      .mchat-input{flex:1;height:44px;border:1px solid var(--g200);border-radius:22px;padding:0 16px;font-size:14px;color:var(--g900);font-family:'DM Sans',sans-serif;background:var(--g50);}
+      .mchat-input:focus{outline:none;border-color:var(--green);background:var(--white);}
+      .mchat-input::placeholder{color:var(--g400);}
+      .mchat-send-btn{width:44px;height:44px;border-radius:50%;background:var(--green);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;}
+      .mchat-send-btn:hover{background:var(--green-dark);}
+    }
+
+    /* MODAL */
+    .mback{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:900;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;padding:16px;}
+    .mback.open{opacity:1;pointer-events:all;}
+    .modal{background:var(--white);border-radius:var(--r-xl);padding:28px;width:100%;max-width:370px;box-shadow:0 12px 32px rgba(0,0,0,.14);transform:translateY(16px);transition:transform .2s;}
+    .mback.open .modal{transform:none;}
+    .mlogo{display:flex;align-items:center;gap:8px;margin-bottom:18px;}
+    .mt{font-family:'DM Serif Display',serif;font-size:21px;margin-bottom:5px;}
+    .ms{font-size:13px;color:var(--g400);margin-bottom:20px;line-height:1.6;}
+    .mf{margin-bottom:11px;}
+    .ml{font-size:10px;font-weight:600;color:var(--g600);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;display:block;}
+    .mi{width:100%;height:38px;border:1px solid var(--g200);border-radius:var(--r-md);padding:0 12px;font-size:14px;color:var(--g900);font-family:'DM Sans',sans-serif;}
+    .mi:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(29,158,117,.12);}
+    .mi::placeholder{color:var(--g400);}
+    .mbr{display:flex;gap:8px;margin-top:18px;}
+    .msbtn{flex:1;height:40px;background:var(--green);color:#fff;border:none;border-radius:var(--r-md);font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;}
+    .msbtn:hover{background:var(--green-dark);}
+    .mxbtn{height:40px;padding:0 15px;background:transparent;color:var(--g400);border:1px solid var(--g200);border-radius:var(--r-md);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+    .msuc{text-align:center;padding:10px 0;}
+    .msuc-i{font-size:38px;margin-bottom:10px;}
+    .msuc-t{font-family:'DM Serif Display',serif;font-size:20px;margin-bottom:7px;}
+    .msuc-s{font-size:13px;color:var(--g400);line-height:1.6;}
+
+    /* ═══════════════════════════════════════════
+       LIVE CHAT
+    ═══════════════════════════════════════════ */
+    /* FAB bubble */
+    .chat-fab{position:fixed;right:22px;bottom:22px;z-index:550;width:50px;height:50px;border-radius:50%;background:var(--green);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(29,158,117,.45);transition:transform .15s,box-shadow .15s;}
+    .chat-fab:hover{transform:scale(1.08);box-shadow:0 6px 24px rgba(29,158,117,.55);}
+    .chat-badge{position:absolute;top:-3px;right:-3px;width:18px;height:18px;border-radius:50%;background:var(--purple);color:#fff;font-size:10px;font-weight:700;display:none;align-items:center;justify-content:center;border:2px solid var(--white);}
+    .chat-badge.show{display:flex;}
+
+    /* Desktop panel */
+    .chat-panel{position:fixed;right:22px;bottom:84px;z-index:549;width:304px;height:430px;background:var(--white);border:1px solid var(--g200);border-radius:var(--r-xl);box-shadow:0 14px 44px rgba(0,0,0,.16);display:flex;flex-direction:column;overflow:hidden;opacity:0;pointer-events:none;transform:translateY(16px) scale(.97);transition:opacity .22s,transform .22s;}
+    .chat-panel.open{opacity:1;pointer-events:all;transform:none;}
+    .chat-hdr{padding:13px 14px;border-bottom:1px solid var(--g100);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--white);}
+    .chat-agent-info{display:flex;align-items:center;gap:9px;}
+    .chat-av{width:32px;height:32px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;flex-shrink:0;}
+    .chat-av-sm{width:24px;height:24px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:600;color:#fff;flex-shrink:0;margin-top:2px;}
+    .chat-name{font-size:13px;font-weight:600;color:var(--g900);}
+    .chat-online{font-size:10px;color:var(--green);font-weight:500;display:flex;align-items:center;gap:4px;margin-top:1px;}
+    .chat-online::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--green);flex-shrink:0;}
+    .chat-close-btn{background:none;border:none;color:var(--g400);cursor:pointer;font-size:14px;line-height:1;padding:4px;}
+    .chat-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:9px;}
+    .chat-msgs::-webkit-scrollbar{width:3px;}
+    .chat-msgs::-webkit-scrollbar-thumb{background:var(--g200);border-radius:4px;}
+    /* empty state */
+    .chat-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:20px;text-align:center;}
+    .chat-empty-av{width:44px;height:44px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#fff;margin-bottom:10px;}
+    .chat-empty-t{font-size:13px;font-weight:600;color:var(--g900);margin-bottom:5px;}
+    .chat-empty-s{font-size:11px;color:var(--g400);line-height:1.6;}
+    /* messages */
+    .chat-msg{display:flex;align-items:flex-end;gap:7px;}
+    .chat-msg.from-user{flex-direction:row-reverse;}
+    .chat-bubble-wrap{display:flex;flex-direction:column;max-width:78%;}
+    .chat-msg.from-user .chat-bubble-wrap{align-items:flex-end;}
+    .chat-bubble{padding:8px 11px;border-radius:14px;font-size:12px;line-height:1.5;word-break:break-word;}
+    .chat-msg.from-agent .chat-bubble{background:var(--g100);color:var(--g900);border-bottom-left-radius:4px;}
+    .chat-msg.from-user .chat-bubble{background:var(--green);color:#fff;border-bottom-right-radius:4px;}
+    .chat-time-lbl{font-size:9px;color:var(--g400);margin-top:3px;padding:0 2px;}
+    /* typing indicator */
+    .chat-typing-bubble{display:flex;align-items:center;gap:4px;padding:10px 14px;}
+    .tdot{width:6px;height:6px;border-radius:50%;background:var(--g400);animation:tdot 1.2s infinite;}
+    .tdot:nth-child(2){animation-delay:.2s;}
+    .tdot:nth-child(3){animation-delay:.4s;}
+    @keyframes tdot{0%,80%,100%{opacity:.25;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+    /* input row */
+    .chat-input-row{padding:10px 12px;border-top:1px solid var(--g100);display:flex;gap:8px;align-items:center;flex-shrink:0;}
+    .chat-input{flex:1;height:34px;border:1px solid var(--g200);border-radius:17px;padding:0 12px;font-size:12px;color:var(--g900);font-family:'DM Sans',sans-serif;background:var(--g50);}
+    .chat-input:focus{outline:none;border-color:var(--green);background:var(--white);}
+    .chat-input::placeholder{color:var(--g400);}
+    .chat-send-btn{width:34px;height:34px;border-radius:50%;background:var(--green);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;}
+    .chat-send-btn:hover{background:var(--green-dark);}
+    /* "Chat now" link in contact forms */
+    .chat-now-link{display:block;text-align:center;margin-top:9px;font-size:11px;color:var(--green);cursor:pointer;font-weight:500;}
+    .chat-now-link:hover{text-decoration:underline;}
+
+    /* Mobile chat (hidden on desktop) */
+    .mchat{display:none;}
+  </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="bar">
+  <a class="logo" href="#">
+    <div class="logo-mark">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M8 1.5C5.1 1.5 2.75 3.85 2.75 6.75C2.75 10.9 8 14.5 8 14.5S13.25 10.9 13.25 6.75C13.25 3.85 10.9 1.5 8 1.5Z" stroke="white" stroke-width="1.5" fill="none"/><circle cx="8" cy="6.75" r="2" fill="white"/></svg>
+    </div>
+    <span class="logo-name">Social<span>Proof</span></span>
+  </a>
+  <div class="bar-center">
+    <!-- Desktop view toggle -->
+    <div class="view-toggle" id="view-toggle">
+      <button class="vt-btn active" data-v="map" id="vt-map">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M1 3.5L5.5 2L10.5 4L15 2.5V12.5L10.5 14L5.5 12L1 13.5V3.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M5.5 2V12M10.5 4V14" stroke="currentColor" stroke-width="1.4"/></svg>
+        Map
+      </button>
+      <button class="vt-btn" data-v="grid" id="vt-grid">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1.5" stroke="currentColor" stroke-width="1.4"/><rect x="9" y="1.5" width="5.5" height="5.5" rx="1.5" stroke="currentColor" stroke-width="1.4"/><rect x="1.5" y="9" width="5.5" height="5.5" rx="1.5" stroke="currentColor" stroke-width="1.4"/><rect x="9" y="9" width="5.5" height="5.5" rx="1.5" stroke="currentColor" stroke-width="1.4"/></svg>
+        Portfolio
+      </button>
+    </div>
+  </div>
+  <div class="bar-right">
+    <div class="chip">Prototype</div>
+    <button class="share-btn" id="share-btn"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="12" cy="3" r="1.5" stroke="currentColor" stroke-width="1.4"/><circle cx="4" cy="8" r="1.5" stroke="currentColor" stroke-width="1.4"/><circle cx="12" cy="13" r="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.5 3.75L5.5 7.25M5.5 8.75l5 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>Share</button>
+    <div class="av-pill" id="agent-pill" style="cursor:pointer;" title="View agent profile"><div class="av">JM</div><span class="av-name">Jennifer Mills Realty</span></div>
+    <button class="cta-btn" id="req-btn">Request Access</button>
+  </div>
+</div>
+
+<!-- SHELL -->
+<div class="shell">
+
+  <!-- DESKTOP SIDEBAR -->
+  <div class="sidebar">
+    <div class="filters">
+      <div class="flbl">Filter by location</div>
+      <div class="srow">
+        <div class="swrap">
+          <svg class="sico" width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <input class="sinput" id="zip-in" placeholder="Zip code" maxlength="5"/>
+        </div>
+        <div class="swrap">
+          <svg class="sico" width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <input class="sinput" id="town-in" placeholder="Town name"/>
+        </div>
+      </div>
+      <div class="aftags" id="aftags"></div>
+      <div class="flbl">Status</div>
+      <div class="pills" id="d-pills">
+        <div class="pill on" data-s="For Sale">For Sale</div>
+        <div class="pill on" data-s="Sold">Sold</div>
+        <div class="pill on" data-s="Under Contract">Under Contract</div>
+        <div class="pill on" data-s="For Rent">For Rent</div>
+      </div>
+    </div>
+
+    <!-- MORE FILTERS -->
+    <div class="filter-more">
+      <div class="filter-toggle" id="filter-toggle">
+        <span class="filter-toggle-lbl">
+          More Filters
+          <span class="filter-active-dot" id="filter-dot"></span>
+        </span>
+        <span class="filter-toggle-ico" id="filter-ico">▼</span>
+      </div>
+      <div class="filter-body" id="filter-body">
+        <div class="flbl">Price range</div>
+        <div class="price-row">
+          <input class="price-input" id="price-min" placeholder="Min $" type="number" min="0" step="10000"/>
+          <span class="price-sep">–</span>
+          <input class="price-input" id="price-max" placeholder="Max $" type="number" min="0" step="10000"/>
+        </div>
+        <div class="flbl">Property type</div>
+        <div class="type-pills pills" id="type-pills"></div>
+        <div class="flbl" style="margin-top:8px;">Bedrooms</div>
+        <div class="beds-pills pills" id="beds-pills">
+          <div class="pill on" data-beds="0">Any</div>
+          <div class="pill" data-beds="1">1+</div>
+          <div class="pill" data-beds="2">2+</div>
+          <div class="pill" data-beds="3">3+</div>
+          <div class="pill" data-beds="4">4+</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-bar">
+      <div class="scard"><div class="snum" id="st-tot">0</div><div class="slbl">Total</div></div>
+      <div class="scard"><div class="snum" id="st-sale" style="color:var(--green)">0</div><div class="slbl">Sale</div></div>
+      <div class="scard"><div class="snum" id="st-sold" style="color:var(--purple)">0</div><div class="slbl">Sold</div></div>
+      <div class="scard"><div class="snum" id="st-con" style="color:var(--amber)">0</div><div class="slbl">Contract</div></div>
+    </div>
+    <div class="llist" id="llist"></div>
+  </div>
+
+  <!-- MAP + GRID AREA -->
+  <div class="mapwrap">
+    <div id="map"></div>
+
+    <!-- GRID VIEW (desktop) -->
+    <div class="grid-area" id="grid-area">
+      <div class="grid-wrap" id="grid-wrap"></div>
+    </div>
+
+    <!-- MOBILE: floating search bar + pills over map -->
+    <div class="m-bar">
+      <div class="m-search-row">
+        <input class="m-search" id="m-search" placeholder="Search by zip code or town…"/>
+        <div class="m-view-toggle">
+          <button class="mvt-btn active" id="mvt-map" title="Map view">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M1 3.5L5.5 2L10.5 4L15 2.5V12.5L10.5 14L5.5 12L1 13.5V3.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M5.5 2V12M10.5 4V14" stroke="currentColor" stroke-width="1.4"/></svg>
+          </button>
+          <button class="mvt-btn" id="mvt-list" title="List view">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="2.5" rx="1.2" fill="currentColor"/><rect x="2" y="6.75" width="12" height="2.5" rx="1.2" fill="currentColor"/><rect x="2" y="10.5" width="12" height="2.5" rx="1.2" fill="currentColor"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="m-pills" id="m-pills">
+        <div class="pill on" data-s="For Sale">For Sale</div>
+        <div class="pill on" data-s="Sold">Sold</div>
+        <div class="pill on" data-s="Under Contract">Under Contract</div>
+        <div class="pill on" data-s="For Rent">For Rent</div>
+        <div class="m-filter-pill" id="m-filter-btn">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          Filters
+        </div>
+      </div>
+    </div>
+
+    <!-- DESKTOP: detail panel -->
+    <div class="dpanel" id="dpanel">
+      <div class="dhero" id="dhero">
+        <div class="dhero-icon" id="d-icon">🏠</div>
+        <button class="dclose" id="dclose">✕</button>
+        <div class="dstatus badge" id="d-badge"></div>
+      </div>
+      <div class="dbody">
+        <div class="dadr" id="d-adr"></div>
+        <div class="dloc" id="d-loc"></div>
+        <div class="dprc" id="d-prc"></div>
+        <div class="dgrid" id="d-grid"></div>
+      </div>
+      <div class="rsec">
+        <div class="rhdr"><div class="rtitle">Client Reviews</div><div class="dstars" id="d-stars"></div></div>
+        <div id="d-revs"></div>
+      </div>
+      <!-- CONTACT FORM (desktop panel) -->
+      <div class="csec">
+        <div class="csec-title">Message Jennifer</div>
+        <div id="d-contact-form">
+          <div class="cform-field"><input class="cinput" id="dc-name" placeholder="Your name" type="text"/></div>
+          <div class="cform-field"><input class="cinput" id="dc-email" placeholder="Your email" type="email"/></div>
+          <div class="cform-field"><textarea class="ctarea" id="dc-msg" placeholder="I'm interested in this property…"></textarea></div>
+          <button class="csend" id="dc-send">Send Message</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DESKTOP: legend -->
+    <div class="legend">
+      <div class="ltitle">Portfolio</div>
+      <div class="li"><div class="ld" style="background:var(--green)"></div>For Sale</div>
+      <div class="li"><div class="ld" style="background:var(--purple)"></div>Sold</div>
+      <div class="li"><div class="ld" style="background:var(--amber)"></div>Under Contract</div>
+      <div class="li"><div class="ld" style="background:var(--blue)"></div>For Rent</div>
+    </div>
+  </div>
+</div>
+
+<!-- MOBILE: bottom sheet -->
+<div class="bsheet" id="bsheet">
+  <div class="bhandle-wrap" id="bhandle-wrap"><div class="bhandle"></div></div>
+  <div class="bhead">
+    <div class="bcount" id="bcnt">12 properties</div>
+    <div class="bstats">
+      <div class="bstat"><div class="bstat-dot" style="background:var(--green)"></div><span id="bs-sale" style="color:var(--green)">0 For Sale</span></div>
+      <div class="bstat"><div class="bstat-dot" style="background:var(--purple)"></div><span id="bs-sold" style="color:var(--purple)">0 Sold</span></div>
+      <div class="bstat"><div class="bstat-dot" style="background:var(--amber)"></div><span id="bs-con" style="color:var(--amber)">0 Contract</span></div>
+    </div>
+  </div>
+  <div class="blisting" id="blisting"></div>
+</div>
+
+<!-- MOBILE: full-screen detail -->
+<div class="mdetail" id="mdetail">
+  <div class="md-hero" id="md-hero">
+    <div class="md-icon" id="md-icon">🏠</div>
+    <button class="md-back" id="md-back">‹</button>
+    <div class="md-badge-pos"><div class="badge" id="md-badge"></div></div>
+  </div>
+  <div class="md-body">
+    <div class="md-adr" id="md-adr"></div>
+    <div class="md-loc" id="md-loc"></div>
+    <div class="md-prc" id="md-prc"></div>
+    <div class="md-grid" id="md-grid"></div>
+  </div>
+  <div class="md-rev">
+    <div class="md-rhdr"><div class="md-rtitle">Client Reviews</div><div class="dstars" id="md-stars"></div></div>
+    <div id="md-revs"></div>
+  </div>
+  <!-- CONTACT FORM (mobile detail) -->
+  <div class="md-contact">
+    <div class="md-contact-title">Message Jennifer</div>
+    <div id="md-contact-form">
+      <input class="md-cinput" id="mdc-name" placeholder="Your name" type="text"/>
+      <input class="md-cinput" id="mdc-email" placeholder="Your email" type="email"/>
+      <textarea class="md-ctarea" id="mdc-msg" placeholder="I'm interested in this property…"></textarea>
+      <button class="md-csend" id="mdc-send">Send Message</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Request Access -->
+<div class="mback" id="mback">
+  <div class="modal">
+    <div class="mlogo">
+      <div class="logo-mark" style="width:28px;height:28px"><svg viewBox="0 0 16 16" fill="none" style="width:15px;height:15px"><path d="M8 1.5C5.1 1.5 2.75 3.85 2.75 6.75C2.75 10.9 8 14.5 8 14.5S13.25 10.9 13.25 6.75C13.25 3.85 10.9 1.5 8 1.5Z" stroke="white" stroke-width="1.5" fill="none"/><circle cx="8" cy="6.75" r="2" fill="white"/></svg></div>
+      <span class="logo-name">Social<span>Proof</span></span>
+    </div>
+    <div id="mbody">
+      <div class="mt">Get early access</div>
+      <div class="ms">Be among the first Connecticut realtors to showcase your portfolio with real-time maps and client reviews.</div>
+      <div class="mf"><label class="ml" for="m-nm">Full name</label><input class="mi" id="m-nm" placeholder="Jane Smith" type="text"/></div>
+      <div class="mf"><label class="ml" for="m-em">Email address</label><input class="mi" id="m-em" placeholder="jane@smithrealty.com" type="email"/></div>
+      <div class="mf"><label class="ml" for="m-br">Brokerage / Agency</label><input class="mi" id="m-br" placeholder="Smith Realty Group" type="text"/></div>
+      <div class="mf"><label class="ml" for="m-ml">SmartMLS Member ID (optional)</label><input class="mi" id="m-ml" placeholder="e.g. 12345" type="text"/></div>
+      <div class="mbr">
+        <button class="msbtn" id="msub">Request Access →</button>
+        <button class="mxbtn" id="mcan">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AGENT PROFILE MODAL -->
+<div class="profile-back" id="profile-back">
+  <div class="profile-modal">
+    <div class="profile-hero">
+      <div class="profile-hs-wrap"><div class="profile-hs">JM</div></div>
+      <button class="profile-close" id="profile-close">✕</button>
+    </div>
+    <div class="profile-body">
+      <div class="profile-name">Jennifer Mills</div>
+      <div class="profile-role">Realtor · Jennifer Mills Realty</div>
+      <div class="profile-bio">With over 14 years of experience in the Connecticut shoreline market, Jennifer specializes in residential sales, waterfront properties, and investment portfolios across New Haven and Fairfield counties. Known for her deep local knowledge and no-pressure approach, she has closed over $85M in transactions.</div>
+      <div class="profile-contacts">
+        <div class="pc"><div class="pc-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4.5A1.5 1.5 0 013.5 3h9A1.5 1.5 0 0114 4.5v7a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 11.5v-7z" stroke="currentColor" stroke-width="1.3"/><path d="M2 5l6 4 6-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></div><a href="mailto:jennifer@millsrealty.com">jennifer@millsrealty.com</a></div>
+        <div class="pc"><div class="pc-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 2.5C3 2.224 3.224 2 3.5 2h2.236a.5.5 0 01.476.345l.75 2.25a.5.5 0 01-.149.538L5.5 6.2C6.284 7.9 7.9 9.5 9.8 10.287l1.067-1.313a.5.5 0 01.538-.149l2.25.75A.5.5 0 0114 10.05v2.45c0 .276-.224.5-.5.5C6.492 13 3 9.5 3 2.5z" stroke="currentColor" stroke-width="1.3"/></svg></div><a href="tel:+12035550182">(203) 555-0182</a></div>
+        <div class="pc"><div class="pc-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><path d="M8 2v6l3 2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></div><span>SmartMLS Member #14892 · Licensed CT</span></div>
+        <div class="pc"><div class="pc-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1.5C5.1 1.5 2.75 3.85 2.75 6.75C2.75 10.9 8 14.5 8 14.5S13.25 10.9 13.25 6.75C13.25 3.85 10.9 1.5 8 1.5Z" stroke="currentColor" stroke-width="1.3" fill="none"/><circle cx="8" cy="6.75" r="2" stroke="currentColor" stroke-width="1.3"/></svg></div><span>West Haven, CT · Serving all 8 CT counties</span></div>
+      </div>
+      <div class="profile-recent-lbl">3 Most Recent Sales</div>
+      <div class="profile-sales" id="profile-sales"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SHARE LINK MODAL -->
+<div class="mback" id="share-back" style="z-index:910;">
+  <div class="modal share-modal-inner">
+    <div class="mlogo">
+      <div class="logo-mark" style="width:28px;height:28px"><svg viewBox="0 0 16 16" fill="none" style="width:15px;height:15px"><path d="M8 1.5C5.1 1.5 2.75 3.85 2.75 6.75C2.75 10.9 8 14.5 8 14.5S13.25 10.9 13.25 6.75C13.25 3.85 10.9 1.5 8 1.5Z" stroke="white" stroke-width="1.5" fill="none"/><circle cx="8" cy="6.75" r="2" fill="white"/></svg></div>
+      <span class="logo-name">Social<span>Proof</span></span>
+    </div>
+    <div class="mt">Shareable client link</div>
+    <div class="ms">Send this link to clients so they can browse your full property portfolio — no login required.</div>
+    <div class="share-url-row">
+      <input class="share-url" id="share-url" readonly/>
+      <button class="share-copy" id="share-copy">Copy</button>
+    </div>
+    <div class="share-note">Clients will see your portfolio map, all listings, and your agent profile. Filters and search are fully available.</div>
+    <div class="share-preview">
+      <div class="share-preview-lbl">Shared as</div>
+      <div class="share-preview-row">
+        <div class="share-preview-av">JM</div>
+        <div><div class="share-preview-name">Jennifer Mills Realty</div><div class="share-preview-sub">West Haven, CT · 12 active listings</div></div>
+      </div>
+    </div>
+    <div class="mbr" style="margin-top:18px;">
+      <button class="msbtn" id="share-done">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- MOBILE FILTER DRAWER -->
+<div class="fm-back" id="fm-back">
+  <div class="fm-drawer">
+    <div class="fm-hdr">
+      <div class="fm-title">Filters</div>
+      <button class="fm-close" id="fm-close">✕</button>
+    </div>
+    <div class="fm-sec">
+      <div class="fm-lbl">Status</div>
+      <div class="fm-pills pills" id="fm-pills">
+        <div class="pill on" data-s="For Sale">For Sale</div>
+        <div class="pill on" data-s="Sold">Sold</div>
+        <div class="pill on" data-s="Under Contract">Under Contract</div>
+        <div class="pill on" data-s="For Rent">For Rent</div>
+      </div>
+    </div>
+    <div class="fm-sec">
+      <div class="fm-lbl">Price range</div>
+      <div class="fm-price-row">
+        <input id="fm-price-min" placeholder="Min $" type="number" min="0" step="10000"/>
+        <span class="fm-price-sep">–</span>
+        <input id="fm-price-max" placeholder="Max $" type="number" min="0" step="10000"/>
+      </div>
+    </div>
+    <div class="fm-sec">
+      <div class="fm-lbl">Property type</div>
+      <div class="fm-pills pills" id="fm-type-pills"></div>
+    </div>
+    <div class="fm-sec">
+      <div class="fm-lbl">Bedrooms</div>
+      <div class="fm-pills pills" id="fm-beds-pills">
+        <div class="pill on" data-beds="0">Any</div>
+        <div class="pill" data-beds="1">1+</div>
+        <div class="pill" data-beds="2">2+</div>
+        <div class="pill" data-beds="3">3+</div>
+        <div class="pill" data-beds="4">4+</div>
+      </div>
+    </div>
+    <button class="fm-apply" id="fm-apply">Apply Filters</button>
+    <button class="fm-clear" id="fm-clear">Clear all filters</button>
+  </div>
+</div>
+
+<!-- PUBLIC VIEW BANNER -->
+<div class="pub-banner" id="pub-banner">
+  Viewing Jennifer Mills Realty's portfolio &nbsp;·&nbsp; <a href="?" style="color:#fff;font-weight:600;">Open SocialProof</a>
+</div>
+
+<!-- CHAT FAB -->
+<button class="chat-fab" id="chat-fab" title="Chat with Jennifer">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" fill="white"/></svg>
+  <span class="chat-badge" id="chat-badge"></span>
+</button>
+
+<!-- DESKTOP CHAT PANEL -->
+<div class="chat-panel" id="chat-panel">
+  <div class="chat-hdr">
+    <div class="chat-agent-info">
+      <div class="chat-av">JM</div>
+      <div>
+        <div class="chat-name">Jennifer Mills</div>
+        <div class="chat-online">Online now</div>
+      </div>
+    </div>
+    <button class="chat-close-btn" id="chat-close">✕</button>
+  </div>
+  <div class="chat-msgs" id="chat-msgs"></div>
+  <div class="chat-input-row">
+    <input class="chat-input" id="chat-input" placeholder="Type a message…"/>
+    <button class="chat-send-btn" id="chat-send">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M14.5 1.5L1.5 7.5L6.5 9L8.5 14.5L14.5 1.5Z" fill="white"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- MOBILE CHAT (full-screen, same pattern as mdetail) -->
+<div class="mchat" id="mchat">
+  <div class="mchat-hdr">
+    <button class="mchat-back" id="mchat-back">‹</button>
+    <div class="mchat-agent">
+      <div class="chat-av">JM</div>
+      <div>
+        <div class="chat-name">Jennifer Mills</div>
+        <div class="chat-online">Online now</div>
+      </div>
+    </div>
+  </div>
+  <div class="mchat-msgs" id="mchat-msgs"></div>
+  <div class="mchat-input-row">
+    <input class="mchat-input" id="mchat-input" placeholder="Type a message…"/>
+    <button class="mchat-send-btn" id="mchat-send">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M14.5 1.5L1.5 7.5L6.5 9L8.5 14.5L14.5 1.5Z" fill="white"/></svg>
+    </button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const DATA=[
+  {id:1,addr:"142 Savin Rock Blvd",town:"West Haven",zip:"06516",status:"For Sale",type:"Single Family",price:485000,sqft:1820,land:6200,beds:3,baths:2,icon:"🏠",lat:41.2665,lng:-72.9654,grad:"135deg,#9FE1CB,#3DBFA0",reviews:[{t:"Jennifer was incredible — found us our dream home in two weeks.",a:"The Marchetti Family",s:5},{t:"Smooth process from start to finish.",a:"D. Okafor",s:5}]},
+  {id:2,addr:"88 Campbell Ave",town:"West Haven",zip:"06516",status:"Sold",type:"Condo",price:310000,sqft:1100,land:0,beds:2,baths:1,icon:"🏢",lat:41.2712,lng:-72.9588,grad:"135deg,#CEC8F6,#8F88E0",reviews:[{t:"Sold above asking in 6 days. Phenomenal.",a:"R. & S. Navarro",s:5},{t:"Professional and always responsive.",a:"T. Gibbons",s:4}]},
+  {id:3,addr:"305 Ocean Ave",town:"West Haven",zip:"06516",status:"Under Contract",type:"Single Family",price:525000,sqft:2100,land:8400,beds:4,baths:2.5,icon:"🏠",lat:41.2589,lng:-72.9701,grad:"135deg,#FAC775,#EF9F27",reviews:[{t:"Stress-free experience. Jennifer knows this market cold.",a:"The Park Family",s:5}]},
+  {id:4,addr:"22 Elm St Unit 4",town:"New Haven",zip:"06510",status:"For Rent",type:"Apartment",price:1850,sqft:780,land:0,beds:1,baths:1,icon:"🏙️",lat:41.3083,lng:-72.9279,grad:"135deg,#B5D4F4,#6AAEE8",reviews:[{t:"Found qualified tenants within a week.",a:"Property Owner",s:5}]},
+  {id:5,addr:"77 Forest Rd",town:"Orange",zip:"06477",status:"For Sale",type:"Single Family",price:629000,sqft:2650,land:18500,beds:4,baths:3,icon:"🏡",lat:41.2784,lng:-73.0285,grad:"135deg,#9FE1CB,#3DBFA0",reviews:[{t:"Best agent in the area, no question.",a:"K. Thompson",s:5},{t:"Handled everything flawlessly.",a:"M. & J. Chen",s:5}]},
+  {id:6,addr:"14 Harbor View Dr",town:"Milford",zip:"06460",status:"Sold",type:"Single Family",price:712000,sqft:3100,land:12000,beds:5,baths:3,icon:"🏠",lat:41.2223,lng:-73.0573,grad:"135deg,#CEC8F6,#8F88E0",reviews:[{t:"Got $40k over asking. Jennifer is a rockstar.",a:"The Williams Family",s:5}]},
+  {id:7,addr:"200 Whalley Ave",town:"New Haven",zip:"06515",status:"For Sale",type:"Multi-Family",price:595000,sqft:3400,land:5800,beds:6,baths:4,icon:"🏘️",lat:41.3421,lng:-72.9648,grad:"135deg,#9FE1CB,#3DBFA0",reviews:[{t:"Excellent investment find. Very knowledgeable.",a:"P. Rosario",s:4}]},
+  {id:8,addr:"55 Boston Post Rd",town:"Milford",zip:"06460",status:"For Rent",type:"Commercial",price:3200,sqft:1900,land:0,beds:0,baths:2,icon:"🏪",lat:41.2311,lng:-73.0621,grad:"135deg,#B5D4F4,#6AAEE8",reviews:[{t:"Had our space leased in 3 weeks.",a:"Sunrise Wellness LLC",s:5}]},
+  {id:9,addr:"9 Merwin Ave",town:"Milford",zip:"06461",status:"Under Contract",type:"Condo",price:298000,sqft:990,land:0,beds:2,baths:1,icon:"🏢",lat:41.2389,lng:-73.0548,grad:"135deg,#FAC775,#EF9F27",reviews:[{t:"Smooth negotiation from start to finish.",a:"First-time Buyer",s:5}]},
+  {id:10,addr:"310 Foxon Rd",town:"Branford",zip:"06405",status:"For Sale",type:"Single Family",price:449000,sqft:1740,land:9200,beds:3,baths:2,icon:"🏠",lat:41.2788,lng:-72.8148,grad:"135deg,#9FE1CB,#3DBFA0",reviews:[{t:"Jennifer found buyers we never would have reached.",a:"The Sorensen Family",s:5}]},
+  {id:11,addr:"7 Main St Unit 2B",town:"New Haven",zip:"06511",status:"Sold",type:"Apartment",price:275000,sqft:860,land:0,beds:2,baths:1,icon:"🏙️",lat:41.3026,lng:-72.9249,grad:"135deg,#CEC8F6,#8F88E0",reviews:[{t:"Record sale price for the building.",a:"Investor Client",s:5}]},
+  {id:12,addr:"44 River St",town:"West Haven",zip:"06516",status:"Under Contract",type:"Single Family",price:392000,sqft:1560,land:5400,beds:3,baths:2,icon:"🏠",lat:41.2742,lng:-72.9622,grad:"135deg,#FAC775,#EF9F27",reviews:[{t:"Jennifer kept us calm through a bidding war.",a:"The Dubois Family",s:5}]},
+];
+
+const SC={"For Sale":"#1D9E75","Sold":"#534AB7","Under Contract":"#BA7517","For Rent":"#185FA5"};
+const BC={"For Sale":"b-sale","Sold":"b-sold","Under Contract":"b-contract","For Rent":"b-rent"};
+const ALL_TYPES=[...new Set(DATA.map(l=>l.type))];
+
+// ── STATE ──
+let active=new Set(["For Sale","Sold","Under Contract","For Rent"]);
+let zipF="",townF="",selId=null;
+let priceMin=null,priceMax=null;
+let typeF=new Set();   // empty = all types shown
+let bedsMin=0;         // 0 = any
+let viewMode="map";    // "map" | "grid"
+let mViewMode="map";   // mobile: "map" | "list"
+
+// ── MAP ──
+const map=L.map('map',{zoomControl:true}).setView([41.29,-72.97],11);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  maxZoom:19
+}).addTo(map);
+
+function pinSVG(color){
+  return`<svg viewBox="0 0 28 36" xmlns="http://www.w3.org/2000/svg"><path d="M14 0C7.37 0 2 5.37 2 12C2 20.25 14 36 14 36S26 20.25 26 12C26 5.37 20.63 0 14 0Z" fill="${color}" stroke="white" stroke-width="1.5"/><circle cx="14" cy="12" r="5" fill="rgba(255,255,255,.9)"/></svg>`;
+}
+
+const mkrs={};
+function refreshMarkers(){
+  const vis=new Set(filtered().map(l=>l.id));
+  DATA.forEach(l=>{
+    if(mkrs[l.id]){map.removeLayer(mkrs[l.id]);delete mkrs[l.id];}
+    if(vis.has(l.id)){
+      const icon=L.divIcon({html:`<div class="sp-pin${l.id===selId?' active':''}">${pinSVG(SC[l.status])}</div>`,className:'',iconSize:[28,36],iconAnchor:[14,36]});
+      const m=L.marker([l.lat,l.lng],{icon}).addTo(map);
+      m.on('click',()=>selectL(l.id));
+      mkrs[l.id]=m;
+    }
+  });
+}
+
+// ── VIEW MODE (desktop) ──
+function setView(mode){
+  viewMode=mode;
+  const mapEl=document.getElementById("map");
+  const gridEl=document.getElementById("grid-area");
+  const legendEl=document.querySelector(".legend");
+  if(mode==="map"){
+    mapEl.style.display="";
+    gridEl.classList.remove("show");
+    if(legendEl)legendEl.style.display="";
+    // close detail panel so it doesn't orphan
+  } else {
+    mapEl.style.display="none";
+    gridEl.classList.add("show");
+    if(legendEl)legendEl.style.display="none";
+    document.getElementById("dpanel").classList.remove("open");
+    selId=null;
+  }
+  document.querySelectorAll(".vt-btn").forEach(b=>b.classList.toggle("active",b.dataset.v===mode));
+  renderAll();
+  if(mode==="map") setTimeout(()=>map.invalidateSize(),50);
+}
+
+// ── VIEW MODE (mobile) ──
+function setMView(mode){
+  mViewMode=mode;
+  const mapEl=document.getElementById("map");
+  const bl=document.getElementById("blisting");
+  document.getElementById("mvt-map").classList.toggle("active",mode==="map");
+  document.getElementById("mvt-list").classList.toggle("active",mode==="list");
+  if(mode==="map"){
+    mapEl.style.opacity="1";
+    mapEl.style.pointerEvents="auto";
+    bl.classList.remove("grid-mode");
+    setSheet("peek");
+  } else {
+    // list/grid mode: push sheet up so it covers map
+    bl.classList.add("grid-mode");
+    setSheet("full");
+  }
+}
+
+// ── DATA HELPERS ──
+function fmt(l){return l.status==="For Rent"?"$"+l.price.toLocaleString()+"/mo":"$"+l.price.toLocaleString();}
+function filtered(){
+  return DATA.filter(l=>{
+    if(!active.has(l.status)) return false;
+    if(zipF && l.zip!==zipF) return false;
+    if(townF && !l.town.toLowerCase().includes(townF.toLowerCase())) return false;
+    if(priceMin!==null && l.price<priceMin) return false;
+    if(priceMax!==null && l.price>priceMax) return false;
+    if(typeF.size>0 && !typeF.has(l.type)) return false;
+    if(bedsMin>0 && l.beds<bedsMin) return false;
+    return true;
+  });
+}
+function hasMoreFilters(){return priceMin!==null||priceMax!==null||typeF.size>0||bedsMin>0;}
+function getFields(l){const f=[["Type",l.type],["Interior",l.sqft.toLocaleString()+" sqft"]];if(l.land>0)f.push(["Land",l.land.toLocaleString()+" sqft"]);if(l.beds>0)f.push(["Beds / Baths",`${l.beds}bd · ${l.baths}ba`]);f.push(["Town",l.town],["Zip",l.zip]);return f;}
+function stars(n){return"★".repeat(n)+"☆".repeat(5-n);}
+function avgS(l){return Math.round(l.reviews.reduce((a,r)=>a+r.s,0)/l.reviews.length);}
+
+function renderStats(list){
+  document.getElementById("st-tot").textContent=list.length;
+  document.getElementById("st-sale").textContent=list.filter(l=>l.status==="For Sale").length;
+  document.getElementById("st-sold").textContent=list.filter(l=>l.status==="Sold").length;
+  document.getElementById("st-con").textContent=list.filter(l=>l.status==="Under Contract").length;
+  const n=list.length;
+  document.getElementById("bcnt").textContent=n+" propert"+(n===1?"y":"ies");
+  document.getElementById("bs-sale").textContent=list.filter(l=>l.status==="For Sale").length+" For Sale";
+  document.getElementById("bs-sold").textContent=list.filter(l=>l.status==="Sold").length+" Sold";
+  document.getElementById("bs-con").textContent=list.filter(l=>l.status==="Under Contract").length+" Contract";
+}
+
+function renderAF(){
+  const el=document.getElementById("aftags");el.innerHTML="";
+  if(zipF){const t=document.createElement("div");t.className="ftag";t.innerHTML=`ZIP: ${zipF} <div class="ftag-x">✕</div>`;t.onclick=()=>{zipF="";document.getElementById("zip-in").value="";renderAll();};el.appendChild(t);}
+  if(townF){const t=document.createElement("div");t.className="ftag";t.innerHTML=`${townF} <div class="ftag-x">✕</div>`;t.onclick=()=>{townF="";document.getElementById("town-in").value="";renderAll();};el.appendChild(t);}
+  if(priceMin!==null){const t=document.createElement("div");t.className="ftag";t.innerHTML=`Min $${priceMin.toLocaleString()} <div class="ftag-x">✕</div>`;t.onclick=()=>{priceMin=null;document.getElementById("price-min").value="";renderAll();};el.appendChild(t);}
+  if(priceMax!==null){const t=document.createElement("div");t.className="ftag";t.innerHTML=`Max $${priceMax.toLocaleString()} <div class="ftag-x">✕</div>`;t.onclick=()=>{priceMax=null;document.getElementById("price-max").value="";renderAll();};el.appendChild(t);}
+  typeF.forEach(tp=>{const t=document.createElement("div");t.className="ftag";t.innerHTML=`${tp} <div class="ftag-x">✕</div>`;t.onclick=()=>{typeF.delete(tp);syncTypePills();renderAll();};el.appendChild(t);});
+  if(bedsMin>0){const t=document.createElement("div");t.className="ftag";t.innerHTML=`${bedsMin}+ beds <div class="ftag-x">✕</div>`;t.onclick=()=>{bedsMin=0;syncBedsPills();renderAll();};el.appendChild(t);}
+  // filter dot indicator
+  document.getElementById("filter-dot").classList.toggle("show",hasMoreFilters());
+  // mobile filter pill
+  const mfp=document.getElementById("m-filter-btn");
+  if(mfp) mfp.classList.toggle("active",hasMoreFilters()||active.size<4);
+}
+
+function cardInner(l){
+  const land=l.land>0?`<div class="cmi">${l.land.toLocaleString()} sqft land</div>`:"";
+  const bed=l.beds>0?`<div class="cmi">${l.beds}bd · ${l.baths}ba</div>`:"";
+  return`<div class="ctop"><div><div class="cadr">${l.addr}</div><div class="ctwn">${l.town}, CT ${l.zip}</div></div><span class="badge ${BC[l.status]}">${l.status}</span></div><div class="cprc">${fmt(l)}</div><div class="cmeta"><div class="cmi">${l.type}</div><div class="cmi">${l.sqft.toLocaleString()} sqft</div>${bed}${land}</div>`;
+}
+
+function renderLists(list){
+  ["llist","blisting"].forEach(id=>{
+    const el=document.getElementById(id);el.innerHTML="";
+    if(!list.length){el.innerHTML=`<div class="nores"><div class="nores-i">🔍</div>No properties match.</div>`;return;}
+    list.forEach(l=>{const c=document.createElement("div");c.className="lcard"+(l.id===selId?" sel":"");c.innerHTML=cardInner(l);c.onclick=()=>selectL(l.id);el.appendChild(c);});
+  });
+}
+
+// ── GRID RENDER ──
+function renderGrid(list){
+  const el=document.getElementById("grid-wrap");el.innerHTML="";
+  if(!list.length){el.innerHTML=`<div class="nores" style="grid-column:1/-1"><div class="nores-i">🔍</div>No properties match your filters.</div>`;return;}
+  list.forEach(l=>{
+    const c=document.createElement("div");
+    c.className="gcard"+(l.id===selId?" sel":"");
+    const rev=l.reviews[0];
+    const bed=l.beds>0?`<div class="gmi">${l.beds}bd · ${l.baths}ba</div>`:"";
+    const land=l.land>0?`<div class="gmi">${l.land.toLocaleString()} sqft lot</div>`:"";
+    c.innerHTML=`
+      <div class="ghero" style="background:linear-gradient(${l.grad})">
+        <span style="font-size:46px;filter:drop-shadow(0 3px 6px rgba(0,0,0,.15))">${l.icon}</span>
+        <div class="gbadge-pos"><span class="badge ${BC[l.status]}">${l.status}</span></div>
+      </div>
+      <div class="gbody">
+        <div class="gadr">${l.addr}</div>
+        <div class="gtwn">${l.town}, CT ${l.zip}</div>
+        <div class="gprc">${fmt(l)}</div>
+        <div class="gmeta">
+          <div class="gmi">${l.type}</div>
+          <div class="gmi">${l.sqft.toLocaleString()} sqft</div>
+          ${bed}${land}
+        </div>
+        <div class="grev-row">
+          <div class="grev-stars">${stars(avgS(l))}</div>
+          <div class="grev-quote">"${rev.t}"</div>
+        </div>
+      </div>`;
+    c.onclick=()=>selectL(l.id);
+    el.appendChild(c);
+  });
+}
+
+// ── DETAIL ──
+function contactFormHTML(addr){
+  return`<div class="cform-field"><input class="cinput" id="dc-name" placeholder="Your name" type="text"/></div>
+<div class="cform-field"><input class="cinput" id="dc-email" placeholder="Your email" type="email"/></div>
+<div class="cform-field"><textarea class="ctarea" id="dc-msg" placeholder="I'm interested in ${addr}…"></textarea></div>
+<button class="csend" id="dc-send">Send Message</button>
+<span class="chat-now-link" id="dc-chat-link">Or chat with Jennifer now →</span>`;
+}
+
+function bindDesktopContact(){
+  const btn=document.getElementById("dc-send");
+  if(!btn)return;
+  btn.addEventListener("click",()=>{
+    const nm=(document.getElementById("dc-name")||{}).value?.trim();
+    const em=(document.getElementById("dc-email")||{}).value?.trim();
+    if(!nm||!em){alert("Please enter your name and email.");return;}
+    document.getElementById("d-contact-form").innerHTML=`<div class="csuc"><div class="csuc-i">✉️</div><div class="csuc-t">Message sent!</div><div class="csuc-s">Jennifer will get back to you at ${em} shortly.</div></div><span class="chat-now-link" id="dc-chat-link2">Or chat with Jennifer now →</span>`;
+    document.getElementById("dc-chat-link2").addEventListener("click",openChat);
+  });
+  const chatLink=document.getElementById("dc-chat-link");
+  if(chatLink)chatLink.addEventListener("click",openChat);
+}
+
+function showDesktopDetail(l){
+  const p=document.getElementById("dpanel");
+  document.getElementById("d-icon").textContent=l.icon;
+  document.getElementById("dhero").style.background=`linear-gradient(${l.grad})`;
+  document.getElementById("d-adr").textContent=l.addr;
+  document.getElementById("d-loc").textContent=`${l.town}, CT ${l.zip}`;
+  document.getElementById("d-prc").textContent=fmt(l);
+  const b=document.getElementById("d-badge");b.textContent=l.status;b.className=`dstatus badge ${BC[l.status]}`;
+  document.getElementById("d-grid").innerHTML=getFields(l).map(([k,v])=>`<div class="dfield"><div class="dflbl">${k}</div><div class="dfval">${v}</div></div>`).join("");
+  document.getElementById("d-stars").textContent=stars(avgS(l));
+  document.getElementById("d-revs").innerHTML=l.reviews.map(r=>`<div class="ri"><div class="ri-s">${stars(r.s)}</div><div class="ri-t">"${r.t}"</div><div class="ri-a">— ${r.a}</div></div>`).join("");
+  // reset contact form
+  document.getElementById("d-contact-form").innerHTML=contactFormHTML(l.addr);
+  bindDesktopContact();
+  p.classList.add("open");
+}
+
+function mobileContactFormHTML(addr){
+  return`<input class="md-cinput" id="mdc-name" placeholder="Your name" type="text"/>
+<input class="md-cinput" id="mdc-email" placeholder="Your email" type="email"/>
+<textarea class="md-ctarea" id="mdc-msg" placeholder="I'm interested in ${addr}…"></textarea>
+<button class="md-csend" id="mdc-send">Send Message</button>
+<span class="chat-now-link" id="mdc-chat-link">Or chat with Jennifer now →</span>`;
+}
+
+function bindMobileContact(){
+  const btn=document.getElementById("mdc-send");
+  if(!btn)return;
+  btn.addEventListener("click",()=>{
+    const nm=(document.getElementById("mdc-name")||{}).value?.trim();
+    const em=(document.getElementById("mdc-email")||{}).value?.trim();
+    if(!nm||!em){alert("Please enter your name and email.");return;}
+    document.getElementById("md-contact-form").innerHTML=`<div class="csuc" style="padding:16px 0 8px"><div class="csuc-i">✉️</div><div class="csuc-t">Message sent!</div><div class="csuc-s">Jennifer will get back to you at ${em} shortly.</div></div><span class="chat-now-link" id="mdc-chat-link2">Or chat with Jennifer now →</span>`;
+    document.getElementById("mdc-chat-link2").addEventListener("click",openChat);
+  });
+  const chatLink=document.getElementById("mdc-chat-link");
+  if(chatLink)chatLink.addEventListener("click",openChat);
+}
+
+function showMobileDetail(l){
+  document.getElementById("md-icon").textContent=l.icon;
+  document.getElementById("md-hero").style.background=`linear-gradient(${l.grad})`;
+  document.getElementById("md-adr").textContent=l.addr;
+  document.getElementById("md-loc").textContent=`${l.town}, CT ${l.zip}`;
+  document.getElementById("md-prc").textContent=fmt(l);
+  const b=document.getElementById("md-badge");b.textContent=l.status;b.className=`badge ${BC[l.status]}`;
+  document.getElementById("md-grid").innerHTML=getFields(l).map(([k,v])=>`<div class="md-field"><div class="md-flbl">${k}</div><div class="md-fval">${v}</div></div>`).join("");
+  document.getElementById("md-stars").textContent=stars(avgS(l));
+  document.getElementById("md-revs").innerHTML=l.reviews.map(r=>`<div class="md-ri"><div class="md-ri-s">${stars(r.s)}</div><div class="md-ri-t">"${r.t}"</div><div class="md-ri-a">— ${r.a}</div></div>`).join("");
+  // reset contact form
+  document.getElementById("md-contact-form").innerHTML=mobileContactFormHTML(l.addr);
+  bindMobileContact();
+  document.getElementById("mdetail").classList.add("open");
+}
+
+function selectL(id){
+  selId=id;
+  const l=DATA.find(x=>x.id===id);
+  renderAll();
+  if(!l)return;
+  if(window.innerWidth<=768){
+    setSheet("peek");
+    showMobileDetail(l);
+  } else {
+    if(viewMode==="map") map.setView([l.lat,l.lng],14,{animate:true});
+    showDesktopDetail(l);
+  }
+}
+
+// ── BOTTOM SHEET ──
+const sheet=document.getElementById("bsheet");
+let shState="peek";
+function setSheet(s){
+  shState=s;
+  sheet.classList.remove("mid","full");
+  if(s==="mid")sheet.classList.add("mid");
+  if(s==="full")sheet.classList.add("full");
+}
+let touchStartY=null;
+const hw=document.getElementById("bhandle-wrap");
+hw.addEventListener("touchstart",e=>{touchStartY=e.touches[0].clientY;},{passive:true});
+hw.addEventListener("touchend",e=>{
+  if(touchStartY===null)return;
+  const dy=touchStartY-e.changedTouches[0].clientY;
+  if(Math.abs(dy)<12){if(shState==="peek")setSheet("mid");else if(shState==="mid")setSheet("full");else setSheet("peek");}
+  else if(dy>40){setSheet(shState==="peek"?"mid":"full");}
+  else if(dy<-40){setSheet(shState==="full"?"mid":"peek");}
+  touchStartY=null;
+},{passive:true});
+hw.addEventListener("click",()=>{
+  if(shState==="peek")setSheet("mid");
+  else if(shState==="mid")setSheet("full");
+  else setSheet("peek");
+});
+
+// ── DESKTOP VIEW TOGGLE ──
+document.getElementById("view-toggle").querySelectorAll(".vt-btn").forEach(btn=>{
+  btn.addEventListener("click",()=>setView(btn.dataset.v));
+});
+
+// ── MOBILE VIEW TOGGLE ──
+document.getElementById("mvt-map").addEventListener("click",()=>setMView("map"));
+document.getElementById("mvt-list").addEventListener("click",()=>setMView("list"));
+
+// ── STATUS PILLS ──
+function bindStatusPills(id){
+  document.getElementById(id).querySelectorAll(".pill[data-s]").forEach(p=>{
+    p.addEventListener("click",()=>{
+      const s=p.dataset.s;
+      if(active.has(s))active.delete(s);else active.add(s);
+      document.querySelectorAll(`.pill[data-s="${s}"]`).forEach(x=>x.classList.toggle("on",active.has(s)));
+      renderAll();
+    });
+  });
+}
+bindStatusPills("d-pills");
+bindStatusPills("m-pills");
+bindStatusPills("fm-pills");
+
+// ── TYPE PILLS (desktop) ──
+const typePillsEl=document.getElementById("type-pills");
+ALL_TYPES.forEach(tp=>{
+  const p=document.createElement("div");
+  p.className="pill";p.dataset.type=tp;p.textContent=tp;
+  p.addEventListener("click",()=>{
+    if(typeF.has(tp))typeF.delete(tp);else typeF.add(tp);
+    syncTypePills();renderAll();
+  });
+  typePillsEl.appendChild(p);
+});
+
+// Mobile type pills
+const fmTypePillsEl=document.getElementById("fm-type-pills");
+ALL_TYPES.forEach(tp=>{
+  const p=document.createElement("div");
+  p.className="pill";p.dataset.type=tp;p.textContent=tp;
+  p.addEventListener("click",()=>{
+    if(typeF.has(tp))typeF.delete(tp);else typeF.add(tp);
+    syncTypePills();
+  });
+  fmTypePillsEl.appendChild(p);
+});
+
+function syncTypePills(){
+  document.querySelectorAll(".pill[data-type]").forEach(p=>{
+    p.classList.toggle("on",typeF.has(p.dataset.type));
+  });
+}
+
+// ── BEDS PILLS (desktop + mobile) ──
+function bindBedsPills(containerId){
+  document.getElementById(containerId).querySelectorAll(".pill[data-beds]").forEach(p=>{
+    p.addEventListener("click",()=>{
+      bedsMin=parseInt(p.dataset.beds);
+      syncBedsPills();
+      if(containerId==="beds-pills") renderAll();
+    });
+  });
+}
+bindBedsPills("beds-pills");
+bindBedsPills("fm-beds-pills");
+
+function syncBedsPills(){
+  document.querySelectorAll(".pill[data-beds]").forEach(p=>{
+    p.classList.toggle("on",parseInt(p.dataset.beds)===bedsMin);
+  });
+}
+
+// ── MORE FILTERS toggle (desktop) ──
+document.getElementById("filter-toggle").addEventListener("click",()=>{
+  const body=document.getElementById("filter-body");
+  const ico=document.getElementById("filter-ico");
+  body.classList.toggle("open");
+  ico.classList.toggle("open");
+});
+
+// ── PRICE INPUTS (desktop) ──
+let ptMin,ptMax;
+document.getElementById("price-min").addEventListener("input",e=>{clearTimeout(ptMin);ptMin=setTimeout(()=>{const v=parseInt(e.target.value);priceMin=isNaN(v)?null:v;renderAll();},400);});
+document.getElementById("price-max").addEventListener("input",e=>{clearTimeout(ptMax);ptMax=setTimeout(()=>{const v=parseInt(e.target.value);priceMax=isNaN(v)?null:v;renderAll();},400);});
+
+// ── LOCATION INPUTS ──
+let zt,tt;
+document.getElementById("zip-in").addEventListener("input",e=>{clearTimeout(zt);zt=setTimeout(()=>{zipF=e.target.value.trim();renderAll();},300);});
+document.getElementById("town-in").addEventListener("input",e=>{clearTimeout(tt);tt=setTimeout(()=>{townF=e.target.value.trim();renderAll();},300);});
+document.getElementById("m-search").addEventListener("input",e=>{
+  clearTimeout(zt);const v=e.target.value.trim();
+  zt=setTimeout(()=>{if(/^\d{5}$/.test(v)){zipF=v;townF="";}else{townF=v;zipF="";}renderAll();},300);
+});
+
+// ── CLOSE / BACK ──
+document.getElementById("dclose").addEventListener("click",()=>{document.getElementById("dpanel").classList.remove("open");selId=null;renderAll();});
+document.getElementById("md-back").addEventListener("click",()=>document.getElementById("mdetail").classList.remove("open"));
+
+// ── MOBILE FILTER DRAWER ──
+document.getElementById("m-filter-btn").addEventListener("click",()=>{
+  // sync mobile filter drawer from current state
+  syncTypePills();syncBedsPills();
+  // sync price inputs
+  const fmin=document.getElementById("fm-price-min"),fmax=document.getElementById("fm-price-max");
+  fmin.value=priceMin!==null?priceMin:"";
+  fmax.value=priceMax!==null?priceMax:"";
+  document.getElementById("fm-back").classList.add("open");
+});
+document.getElementById("fm-close").addEventListener("click",()=>document.getElementById("fm-back").classList.remove("open"));
+document.getElementById("fm-back").addEventListener("click",e=>{if(e.target===document.getElementById("fm-back"))document.getElementById("fm-back").classList.remove("open");});
+document.getElementById("fm-apply").addEventListener("click",()=>{
+  // read price from mobile drawer inputs
+  const fmin=parseInt(document.getElementById("fm-price-min").value);
+  const fmax=parseInt(document.getElementById("fm-price-max").value);
+  priceMin=isNaN(fmin)?null:fmin;
+  priceMax=isNaN(fmax)?null:fmax;
+  document.getElementById("fm-back").classList.remove("open");
+  renderAll();
+});
+document.getElementById("fm-clear").addEventListener("click",()=>{
+  priceMin=null;priceMax=null;typeF.clear();bedsMin=0;
+  active=new Set(["For Sale","Sold","Under Contract","For Rent"]);
+  document.getElementById("fm-price-min").value="";
+  document.getElementById("fm-price-max").value="";
+  document.querySelectorAll(".pill[data-s]").forEach(p=>p.classList.toggle("on",true));
+  syncTypePills();syncBedsPills();
+  document.getElementById("fm-back").classList.remove("open");
+  renderAll();
+});
+
+// ── REQUEST ACCESS MODAL ──
+document.getElementById("req-btn").addEventListener("click",()=>document.getElementById("mback").classList.add("open"));
+document.getElementById("mcan").addEventListener("click",()=>document.getElementById("mback").classList.remove("open"));
+document.getElementById("mback").addEventListener("click",e=>{if(e.target===document.getElementById("mback"))document.getElementById("mback").classList.remove("open");});
+document.getElementById("msub").addEventListener("click",()=>{
+  const nm=document.getElementById("m-nm").value.trim(),em=document.getElementById("m-em").value.trim();
+  if(!nm||!em){alert("Please enter your name and email.");return;}
+  document.getElementById("mbody").innerHTML=`<div class="msuc"><div class="msuc-i">🎉</div><div class="msuc-t">You're on the list!</div><div class="msuc-s">Thanks, ${nm}! We'll be in touch at ${em} with early access details.</div></div><div class="mbr" style="margin-top:18px"><button class="msbtn" onclick="document.getElementById('mback').classList.remove('open')">Close</button></div>`;
+});
+
+// ── AGENT PROFILE MODAL ──
+function buildProfileSales(){
+  const sold=DATA.filter(l=>l.status==="Sold").slice(0,3);
+  document.getElementById("profile-sales").innerHTML=sold.map(l=>`
+    <div class="psale" onclick="openListingFromProfile(${l.id})">
+      <div class="psale-icon">${l.icon}</div>
+      <div class="psale-info"><div class="psale-addr">${l.addr}</div><div class="psale-meta">${l.town}, CT · ${l.type}</div></div>
+      <div class="psale-price">$${l.price.toLocaleString()}</div>
+    </div>`).join("");
+}
+function openListingFromProfile(id){document.getElementById("profile-back").classList.remove("open");selectL(id);}
+document.getElementById("agent-pill").addEventListener("click",()=>{buildProfileSales();document.getElementById("profile-back").classList.add("open");});
+document.getElementById("profile-close").addEventListener("click",()=>document.getElementById("profile-back").classList.remove("open"));
+document.getElementById("profile-back").addEventListener("click",e=>{if(e.target===document.getElementById("profile-back"))document.getElementById("profile-back").classList.remove("open");});
+
+// ── SHARE LINK ──
+function buildShareURL(){return window.location.href.split('?')[0]+"?view=public&agent=jennifer-mills";}
+document.getElementById("share-btn").addEventListener("click",()=>{document.getElementById("share-url").value=buildShareURL();document.getElementById("share-back").classList.add("open");});
+document.getElementById("share-done").addEventListener("click",()=>document.getElementById("share-back").classList.remove("open"));
+document.getElementById("share-back").addEventListener("click",e=>{if(e.target===document.getElementById("share-back"))document.getElementById("share-back").classList.remove("open");});
+document.getElementById("share-copy").addEventListener("click",()=>{
+  const el=document.getElementById("share-url");el.select();el.setSelectionRange(0,999);
+  navigator.clipboard.writeText(el.value).catch(()=>{});
+  const btn=document.getElementById("share-copy");
+  btn.textContent="Copied!";btn.classList.add("copied");
+  setTimeout(()=>{btn.textContent="Copy";btn.classList.remove("copied");},2000);
+});
+
+// ── PUBLIC VIEW MODE ──
+(function(){
+  const params=new URLSearchParams(window.location.search);
+  if(params.get("view")==="public"){
+    document.getElementById("pub-banner").classList.add("show");
+    const reqBtn=document.getElementById("req-btn");if(reqBtn)reqBtn.style.display="none";
+    const shareBtn=document.getElementById("share-btn");if(shareBtn)shareBtn.style.display="none";
+    document.querySelector(".shell").style.paddingTop="calc(var(--bar) + 38px)";
+    const mw=document.querySelector(".mapwrap");if(mw&&window.innerWidth<=768)mw.style.top="calc(var(--bar) + 38px)";
+  }
+})();
+
+// ── LIVE CHAT ──
+const chatMessages=[];
+let chatUnread=0;
+let replyIdx=0;
+let isTyping=false;
+
+const REPLIES=[
+  "Hi there! 👋 Thanks for reaching out. How can I help you today?",
+  "Great question — I know this market really well. Is there a specific property or area you had in mind?",
+  "Happy to help with that! I've been working the New Haven and Fairfield County area for 14 years, so feel free to ask me anything.",
+  "I'd love to set up a quick call to chat more. What's the best time to reach you?",
+  "Absolutely — I can get you more details on that. In the meantime, feel free to keep browsing the portfolio!",
+];
+
+function openChat(){
+  const isMobile=window.innerWidth<=768;
+  if(isMobile){
+    document.getElementById("mchat").classList.add("open");
+  } else {
+    document.getElementById("chat-panel").classList.add("open");
+  }
+  chatUnread=0;
+  updateChatBadge();
+  renderChatMsgs();
+  // auto-greet on first open
+  if(chatMessages.length===0&&!isTyping){
+    triggerAgentReply(REPLIES[0],900);
+    replyIdx=1;
+  }
+  // focus input
+  setTimeout(()=>{
+    const inp=document.getElementById(isMobile?"mchat-input":"chat-input");
+    if(inp)inp.focus();
+  },120);
+}
+
+function closeChat(){
+  document.getElementById("chat-panel").classList.remove("open");
+  document.getElementById("mchat").classList.remove("open");
+}
+
+function sendChatMessage(text){
+  if(!text.trim())return;
+  chatMessages.push({from:"user",text:text.trim(),time:new Date()});
+  renderChatMsgs();
+  // pick next reply
+  const reply=REPLIES[replyIdx%REPLIES.length];
+  replyIdx++;
+  triggerAgentReply(reply,1100+Math.random()*900);
+}
+
+function triggerAgentReply(text,delay){
+  isTyping=true;
+  renderChatMsgs();
+  setTimeout(()=>{
+    isTyping=false;
+    chatMessages.push({from:"agent",text,time:new Date()});
+    const panelOpen=document.getElementById("chat-panel").classList.contains("open");
+    const mchatOpen=document.getElementById("mchat").classList.contains("open");
+    if(!panelOpen&&!mchatOpen){chatUnread++;updateChatBadge();}
+    renderChatMsgs();
+  },delay);
+}
+
+function updateChatBadge(){
+  const b=document.getElementById("chat-badge");
+  if(chatUnread>0){b.textContent=chatUnread;b.classList.add("show");}
+  else{b.textContent="";b.classList.remove("show");}
+}
+
+function fmtChatTime(d){return d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});}
+
+function chatMsgHTML(m){
+  if(m.from==="agent"){
+    return`<div class="chat-msg from-agent">
+      <div class="chat-av-sm">JM</div>
+      <div class="chat-bubble-wrap">
+        <div class="chat-bubble">${m.text}</div>
+        <div class="chat-time-lbl">${fmtChatTime(m.time)}</div>
+      </div>
+    </div>`;
+  }
+  return`<div class="chat-msg from-user">
+    <div class="chat-bubble-wrap">
+      <div class="chat-bubble">${m.text}</div>
+      <div class="chat-time-lbl">${fmtChatTime(m.time)}</div>
+    </div>
+  </div>`;
+}
+
+const EMPTY_STATE=`<div class="chat-empty">
+  <div class="chat-empty-av">JM</div>
+  <div class="chat-empty-t">Chat with Jennifer</div>
+  <div class="chat-empty-s">Ask about any listing or the CT market.<br/>Usually replies within minutes.</div>
+</div>`;
+
+const TYPING_MSG=`<div class="chat-msg from-agent">
+  <div class="chat-av-sm">JM</div>
+  <div class="chat-bubble-wrap">
+    <div class="chat-bubble chat-typing-bubble">
+      <span class="tdot"></span><span class="tdot"></span><span class="tdot"></span>
+    </div>
+  </div>
+</div>`;
+
+function renderChatMsgs(){
+  ["chat-msgs","mchat-msgs"].forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    if(chatMessages.length===0&&!isTyping){el.innerHTML=EMPTY_STATE;return;}
+    el.innerHTML=chatMessages.map(chatMsgHTML).join("")+(isTyping?TYPING_MSG:"");
+    el.scrollTop=el.scrollHeight;
+  });
+}
+
+// bind desktop chat
+document.getElementById("chat-fab").addEventListener("click",()=>{
+  const panelOpen=document.getElementById("chat-panel").classList.contains("open");
+  const mchatOpen=document.getElementById("mchat").classList.contains("open");
+  if(panelOpen||mchatOpen)closeChat();else openChat();
+});
+document.getElementById("chat-close").addEventListener("click",closeChat);
+document.getElementById("mchat-back").addEventListener("click",closeChat);
+
+function bindChatInput(inputId,sendId){
+  const inp=document.getElementById(inputId);
+  const btn=document.getElementById(sendId);
+  if(!inp||!btn)return;
+  const go=()=>{if(inp.value.trim()){sendChatMessage(inp.value);inp.value="";}};
+  btn.addEventListener("click",go);
+  inp.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();go();}});
+}
+bindChatInput("chat-input","chat-send");
+bindChatInput("mchat-input","mchat-send");
+
+// expose globally so contact form links can call it
+window.openChat=openChat;
+
+// init chat panels with empty state
+renderChatMsgs();
+</script>
+function renderAll(){
+  const list=filtered();
+  renderStats(list);
+  renderAF();
+  renderLists(list);
+  if(viewMode==="map") refreshMarkers();
+  if(viewMode==="grid") renderGrid(list);
+}
+renderAll();
+setTimeout(()=>map.invalidateSize(),100);
+setTimeout(()=>map.invalidateSize(),500);
+setTimeout(()=>map.invalidateSize(),1200);
+</script>
+</body>
+</html>
